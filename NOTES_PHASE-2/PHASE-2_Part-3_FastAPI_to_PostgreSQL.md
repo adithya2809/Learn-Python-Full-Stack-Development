@@ -988,7 +988,951 @@ Exactly the same mapping.
 
 
 
+#### **SQLAlchemy CRUD Operations**
 
+
+
+*SQLAlchemy*
+
+*student = Student(*
+
+&#x20;   *name="Agney",*
+
+&#x20;   *age=22,*
+
+&#x20;   *course="AI"*
+
+*)*
+
+
+
+*session.add(student)*
+
+*session.commit()*
+
+
+
+Let's understand every line.
+
+
+
+**Step 1**
+
+*student = Student(*
+
+&#x20;   *name="Agney",*
+
+&#x20;   *age=22,*
+
+&#x20;   *course="AI"*
+
+*)*
+
+
+
+This does NOT insert anything.
+
+It simply creates a Python object.
+
+
+
+Exactly like:
+
+
+
+*person = Person(name="Agney")*
+
+Nothing has reached PostgreSQL yet.
+
+
+
+**Step 2**
+
+*session.add(student)*
+
+
+
+Still nothing is saved permanently.
+
+
+
+It tells SQLAlchemy:
+
+"Track this object. I want to insert it later."
+
+Think of it as putting a letter into an Outbox, not yet into the mailbox.
+
+
+
+**Step 3**
+
+*session.commit()*
+
+
+
+NOW SQLAlchemy sends SQL to PostgreSQL.
+
+
+
+Behind the scenes it generates something very close to:
+
+*INSERT INTO students(name, age, course)*
+
+*VALUES ('Agney',22,'AI');*
+
+
+
+This is why we learned transactions first.
+
+Remember?
+
+
+
+COMMIT;
+
+↓
+
+SQLAlchemy
+
+*session.commit()*
+
+
+
+##### **READ**
+
+SQL
+
+*SELECT \**
+
+*FROM students;*
+
+*SQLAlchemy*
+
+*students = session.query(Student).all()*
+
+
+
+Meaning:
+
+Give me all Student records.
+
+
+
+SQL
+
+*SELECT \**
+
+*FROM students*
+
+*WHERE id = 1;*
+
+SQLAlchemy
+
+*student = session.get(Student, 1)*
+
+
+
+Notice how much cleaner it is.
+
+
+
+##### **UPDATE**
+
+
+
+SQL:
+
+*UPDATE students*
+
+*SET course = 'AI \& ML'*
+
+*WHERE id = 1;*
+
+
+
+SQLAlchemy:
+
+*student = session.get(Student, 1)*
+
+*student.course = "AI \& ML"*
+
+*session.commit()*
+
+
+
+Think about what happened.
+
+You changed a Python object's attribute.
+
+SQLAlchemy noticed that change.
+
+
+
+Then generated:
+
+*UPDATE students*
+
+*SET course='AI \& ML'*
+
+*WHERE id=1;*
+
+
+
+Automatically.
+
+
+
+##### **DELETE**
+
+
+
+SQL:
+
+*DELETE FROM students*
+
+*WHERE id=1;*
+
+
+
+SQLAlchemy:
+
+*student = session.get(Student, 1)*
+
+*session.delete(student)*
+
+*session.commit()*
+
+
+
+Again:
+
+*session.commit()*
+
+↓
+
+COMMIT;
+
+
+
+
+
+|**SQL**|**SQLAlchemy**|
+|-|-|
+|INSERT|session.add()+commit()|
+|SELECT|query()/get()|
+|UPDATE|Change attribute + commit()|
+|DELETE|session.delete()+commit()|
+
+
+
+#### **SQLAlchemy Relationships**
+
+
+
+**Part 1 → ForeignKey**
+
+*department\_id = Column(*
+
+&#x20;   *Integer,*
+
+&#x20;   *ForeignKey("departments.id")*
+
+*)*
+
+Question:
+
+Does this look familiar?
+
+It should.
+
+
+
+It's equivalent to SQL:
+
+*department\_id INT*
+
+*REFERENCES departments(id)*
+
+So far nothing new.
+
+
+
+**Part 2 → relationship()**
+
+This is the new thing.
+
+
+
+*department = relationship("Department")*
+
+What does this do?
+
+
+
+It creates a **Python relationship**, not a database relationship.
+
+That's a huge difference.
+
+
+
+**Suppose:**
+
+
+
+Department
+
+id	name
+
+1	AI
+
+
+
+Employee
+
+id	name	department\_id
+
+5	Agney	1
+
+
+
+**Without relationship:**
+
+*employee.department\_id*
+
+
+
+returns
+
+1
+
+
+
+That's all.
+
+
+
+**With relationship:**
+
+*employee.department*
+
+
+
+returns
+
+*Department(*
+
+&#x20;   *id=1,*
+
+&#x20;   *name="AI"*
+
+*)*
+
+
+
+Now you can do:
+
+employee.department.name
+
+
+
+Output:
+
+AI
+
+
+
+No SQL query written by you.
+
+
+
+###### **One-to-Many Example**
+
+
+
+Department:
+
+
+
+*from sqlalchemy.orm import relationship*
+
+
+
+*class Department(Base):*
+
+&#x20;   *\_\_tablename\_\_ = "departments"*
+
+
+
+&#x20;   *id = Column(Integer, primary\_key=True)*
+
+&#x20;   *name = Column(String)*
+
+
+
+&#x20;   *employees = relationship(*
+
+&#x20;       *"Employee",*
+
+&#x20;       *back\_populates="department"*
+
+&#x20;   *)*
+
+
+
+Employee:
+
+
+
+*class Employee(Base):*
+
+&#x20;   *\_\_tablename\_\_ = "employees"*
+
+
+
+&#x20;   *id = Column(Integer, primary\_key=True)*
+
+
+
+&#x20;   *name = Column(String)*
+
+
+
+&#x20;   *department\_id = Column(*
+
+&#x20;       *Integer,*
+
+&#x20;       *ForeignKey("departments.id")*
+
+&#x20;   *)*
+
+
+
+&#x20;   *department = relationship(*
+
+&#x20;       *"Department",*
+
+&#x20;       *back\_populates="employees"*
+
+&#x20;   *)*
+
+
+
+Looks scary.
+
+Actually it's very logical.
+
+
+
+###### **What is back\_populates?**
+
+
+
+Imagine:
+
+
+
+Department
+
+↓
+
+Employees
+
+
+
+Now imagine **going backwards**.
+
+
+
+Employee
+
+↓
+
+Department
+
+
+
+That's what back\_populates connects.
+
+
+
+Department
+
+
+
+employees
+
+&#x20;    ▲
+
+&#x20;    │
+
+&#x20;    │
+
+department
+
+
+
+Employee
+
+
+
+Department knows its Employees.
+
+Employee knows its Department.
+
+**Two-way navigation.**
+
+
+
+###### **Compare with SQL**
+
+
+
+**SQL:**
+
+
+
+*SELECT \**
+
+*FROM employees*
+
+*INNER JOIN departments*
+
+*ON employees.department\_id = departments.id;*
+
+
+
+**SQLAlchemy:**
+
+
+
+*employee.department.name*
+
+
+
+SQLAlchemy secretly performs the JOIN for you (when needed).
+
+
+
+###### **ForeignKey vs relationship()**
+
+
+
+This is one of the most common interview questions.
+
+|**ForeignKey**|**relationship()**|
+|-|-|
+|Creates the database relationship|Creates the Python object relationship|
+|Stored in PostgreSQL|Exists in SQLAlchemy|
+|Required|Usually used for convenient object navigation|
+|Maintains referential integrity|Enables object navigation|
+
+
+
+
+
+#### **Alembic (Database Migrations)**
+
+
+
+###### **What is a Migration?**
+
+
+
+A migration is a **controlled change** to the **database schema.**
+
+Think of it as **version control** for your **database**.
+
+
+
+Just like Git tracks changes to code...
+
+
+
+Git
+
+
+
+Version 1
+
+↓
+
+Version 2
+
+↓
+
+Version 3
+
+
+
+Alembic tracks **changes to your database**.
+
+
+
+Database
+
+
+
+Version 1
+
+↓
+
+Version 2
+
+↓
+
+Version 3
 
 &#x09;
+
+###### **Why Do We Need Alembic?**
+
+
+
+Imagine this team.
+
+
+
+Developer A:
+
+*class Student(Base):*
+
+&#x20;   *name = Column(String)*
+
+
+
+Developer B adds:
+
+*email = Column(String)*
+
+
+
+How does everyone else get the new database structure?
+
+
+
+**Without Alembic:**
+
+Everyone manually edits their database.
+
+❌ Error-prone.
+
+
+
+**With Alembic:**
+
+Developer B creates a migration.
+
+
+
+Everyone runs:
+
+*alembic upgrade head*
+
+Now everyone's database is **identical.**
+
+
+
+###### **How Alembic Works**
+
+
+
+**Suppose your model is:**
+
+
+
+*class Student(Base):*
+
+&#x20;   *\_\_tablename\_\_ = "students"*
+
+
+
+&#x20;   *id = Column(Integer, primary\_key=True)*
+
+&#x20;   *name = Column(String)*
+
+
+
+**Later you change it to:**
+
+
+
+*class Student(Base):*
+
+&#x20;   *\_\_tablename\_\_ = "students"*
+
+
+
+&#x20;   *id = Column(Integer, primary\_key=True)*
+
+&#x20;   *name = Column(String)*
+
+&#x20;   *email = Column(String)*
+
+
+
+Alembic compares:
+
+
+
+Old model
+
+↓
+
+New model
+
+↓
+
+Generates:
+
+
+
+*ALTER TABLE students*
+
+*ADD COLUMN email VARCHAR(255);*
+
+
+
+**Automatically.**
+
+
+
+**https://github.com/adithya2809/Learn-Python-Full-Stack-Development.git**
+
+## **Now we start the FINAL integration.**
+
+
+
+#### **Lesson 1 — Dependency Injection (get\_db())**
+
+
+
+This is one of the most asked FastAPI interview topics.
+
+
+
+**First understand the problem.**
+
+
+
+Suppose someone sends
+
+
+
+*POST /students*
+
+
+
+Your router needs access to PostgreSQL.
+
+
+
+How?
+
+
+
+Currently you only have
+
+
+
+engine
+
+and
+
+SessionLocal
+
+
+
+inside database.py.
+
+
+
+The router cannot directly use the engine.
+
+
+
+It needs a **Session.**
+
+
+
+A customer wants money.
+
+Does he go to the entire bank?
+
+No.
+
+
+
+He gets a token.
+
+
+
+Customer
+
+↓
+
+Token
+
+↓
+
+Counter
+
+↓
+
+Bank
+
+
+
+That token is exactly what a Session is.
+
+
+
+Therefore every request should get
+
+New Session
+
+↓
+
+Perform Queries
+
+↓
+
+Close Session
+
+
+
+Otherwise:
+
+
+
+100 Requests
+
+↓
+
+100 Open Connections
+
+↓
+
+💥 Server Crash
+
+
+
+FastAPI solves this using **Dependency Injection.**
+
+
+
+We create one function.
+
+Inside database.py
+
+
+
+*def get\_db():*
+
+&#x20;   *db = SessionLocal()*
+
+
+
+&#x20;   *try:*
+
+&#x20;       *yield db*
+
+&#x20;   *finally:*
+
+&#x20;       *db.close()*
+
+
+
+*db = SessionLocal()*
+
+Meaning:
+
+Create a **new database session.**
+
+
+
+*yield db*
+
+This is NOT the same as return.
+
+
+
+**Why is yield used instead of return?**
+
+yield **pauses the function**, **lets FastAPI use the session**, and then **resumes execution** so the cleanup code (db.close()) can run.
+
+
+
+
+
+*db.close()*
+
+db.close() executes after the **request has finished**, regardless of whether the **request succeeded or raised an exception**. Because it's inside a finally block, it always runs.
+
+That's one of the reasons ***try...finally*** is used.
+
+
+
+**What happens if sessions are never closed?**
+
+Database connections remain open.
+
+
+
+Imagine:
+
+
+
+100 Requests
+
+↓
+
+100 Sessions Open
+
+↓
+
+100 Database Connections Occupied
+
+↓
+
+New requests can't get a connection
+
+↓
+
+Application slows down or fails
+
+
+
+This is called a **connection leak.**
+
+
+
+**Session Lifecycle**
+
+
+
+Client
+
+↓
+
+GET /students
+
+↓
+
+get\_db()
+
+↓
+
+Session Created
+
+↓
+
+Router uses Session
+
+↓
+
+Request finished
+
+↓
+
+Close Session
 

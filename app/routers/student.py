@@ -5,6 +5,10 @@ from app.schemas.students import StudentResponse
 from app.schemas.students import StudentUpdate
 from app.schemas.students import StudentCreate
 from fastapi import status
+
+from sqlalchemy.orm import Session #Session is the object through which SQLAlchemy communicates with PostgreSQL.
+from fastapi import Depends #tells fastapi:"Before running this endpoint, give me whatever get_db() returns."
+from app.database import get_db #This prevents connection leaks.
 router = APIRouter()
 
 students_db=[]
@@ -39,7 +43,7 @@ def get_products(category :str, brand :Optional[str]=None):
            }
 next_id=1    
 @router.post("/students")
-def create_student(student:StudentCreate):
+def create_student(student:StudentCreate,db:Session=get_db):  #THIS MEANS: FastAPI, please call get_db() and pass the resulting Session object into the db parameter.
     global next_id
     
     
