@@ -9,6 +9,7 @@ from fastapi import status
 from sqlalchemy.orm import Session #Session is the object through which SQLAlchemy communicates with PostgreSQL.
 from fastapi import Depends #tells fastapi:"Before running this endpoint, give me whatever get_db() returns."
 from app.database import get_db #This prevents connection leaks.
+from app.models import Student
 router = APIRouter()
 
 students_db=[]
@@ -41,40 +42,37 @@ def get_products(category :str, brand :Optional[str]=None):
         "category":category,
         "brand": brand
            }
-next_id=1    
-@router.post("/students")
-def create_student(student:StudentCreate,db:Session=get_db):  #THIS MEANS: FastAPI, please call get_db() and pass the resulting Session object into the db parameter.
-    global next_id
+@router.post("/students",response_model=StudentResponse,status_code=status.HTTP_201_CREATED)
+def create_student(student:StudentCreate,db:Session=Depends(get_db)):  #THIS MEANS: FastAPI, please call get_db() and pass the resulting Session object into the db parameter.
     
     
-    student_data = {
-        "id":next_id,
-        "name":student.name,
-        "branch":student.branch,
-        "age":student.age
-        }
-    students_db.append(student_data)
-    next_id+=1
-    return student_data
+    db_student = Student(
+        name=student.name,
+        age=student.age,
+        course=student.course
+    )
+    db.add(db_student)
+    db.commit()
+    db.refresh(db_student)
+
+    return db_student
     
-    status_code=status.HTTP_201_CREATED
     
 
 @router.get("/students/{id}",response_model=StudentResponse)
-def get_student(id: int):
+def get_student(id: int,db:Session=Depends(get_db)):
 
-    for student in students_db:
-
-        if student["id"] == id:
-            return student
-
-    raise HTTPException(
-        status_code=status.HTTP_404_NOT_FOUND,
-        detail="Student not found"
-    )
-@router.get("/students")
-def get_students():
-    return students_db
+    student=db.query(Student).filter(Student.id==id).first()
+    if student is None:
+        raise HTTPException(status_code=404,detail="Student Not Found")
+    else:
+        return student
+    
+    
+@router.get("/students",response_model=list[StudentResponse])
+def get_students(db:Session=Depends(get_db)):
+    students=db.query(Student).all()
+    return students
 
 @router.put("/students/{id}")
 def update_student(id:int,student:StudentUpdate):
