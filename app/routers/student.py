@@ -74,22 +74,23 @@ def get_students(db:Session=Depends(get_db)):
     students=db.query(Student).all()
     return students
 
-@router.put("/students/{id}")
-def update_student(id:int,student:StudentUpdate):
+@router.put("/students/{id}",response_model=StudentResponse)
+def update_student(id:int,student_update:StudentUpdate,db: Session=Depends(get_db)):
+    student=db.query(Student).filter(Student.id==id).first()
+    if student is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Student not found"
+    )  
+    
+    student.name=student_update.name
+    student.age=student_update.age
+    student.course=student_update.course
 
-    for existing_student in students_db:
-        if existing_student["id"]==id:
-            existing_student["name"]=student.name
-            existing_student["age"]=student.age
-            existing_student["branch"]=student.branch
-            existing_student["stats"]=student.stats
+    db.commit()
+    db.refresh(student)
 
-            return existing_student
-    raise HTTPException(
-        status_code=status.HTTP_404_NOT_FOUND,
-        detail="Student not found"
-    )    
-
+    return student
 @router.patch("/students/{id}")
 def patch_student(id:int,student:StudentUpdate):
     for existing_student in students_db:

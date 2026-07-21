@@ -17,5 +17,6 @@ class StudentResponse(BaseModel):
     name:str
     age:int
     course: str
-   
-from_attributes=True  
+
+class Config():  
+    from_attributes=True  
