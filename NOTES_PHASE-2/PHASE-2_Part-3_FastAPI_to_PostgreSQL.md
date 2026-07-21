@@ -1936,3 +1936,459 @@ Request finished
 
 Close Session
 
+
+
+#### **STORING DATA INTO POSTGRESQL**
+
+From this point onward, every API you build will actually **store data in PostgreSQL.**
+
+
+
+Until now, your project looked like this:
+
+
+
+Client (Postman)
+
+&#x20;       │
+
+&#x20;       ▼
+
+FastAPI
+
+&#x20;       │
+
+&#x20;       ▼
+
+students\_db = \[]
+
+
+
+**The problem?**
+
+❌ Restart the server → Data is lost.
+
+❌ Can't handle large amounts of data.
+
+❌ Not suitable for real applications.
+
+
+
+Now, we're replacing that with:
+
+
+
+&#x20;               POST /students
+
+&#x20;                     │
+
+&#x20;                     ▼
+
+&#x20;             FastAPI Router
+
+&#x20;                     │
+
+&#x20;                     ▼
+
+&#x20;            Pydantic Schema
+
+&#x20;                     │
+
+&#x20;                     ▼
+
+&#x20;         SQLAlchemy Student Model
+
+&#x20;                     │
+
+&#x20;                     ▼
+
+&#x20;              SQLAlchemy Session
+
+&#x20;                     │
+
+&#x20;                     ▼
+
+&#x20;                PostgreSQL
+
+
+
+This is the architecture used in real backend applications.
+
+
+
+#### **Step 1: Understand the flow before writing code**
+
+
+
+Let's say a user sends this request:
+
+*{*
+
+&#x20;   *"name": "Agney",*
+
+&#x20;   *"age": 21,*
+
+&#x20;   *"course": "AI \& ML"*
+
+*}*
+
+
+
+What happens?
+
+**1. FastAPI receives the request**
+
+The router receives:
+
+*@app.post("/students")*
+
+
+
+**2. Pydantic validates it**
+
+Using your schema:
+
+*StudentCreate*
+
+
+
+FastAPI checks:
+
+Is name present?
+
+Is age an integer?
+
+Is course a string?
+
+
+
+If validation fails:
+
+400 Bad Request
+
+The request never reaches the database.
+
+
+
+**3. SQLAlchemy creates a Python object**
+
+Something like:
+
+*student = Student(*
+
+&#x20;   *name="Agney",*
+
+&#x20;   *age=21,*
+
+&#x20;   *course="AI \& ML"*
+
+*)*
+
+
+
+Notice:
+
+This is not yet stored in PostgreSQL.
+
+It's just a Python object in memory.
+
+
+
+**4. Session tracks it**
+
+*db.add(student)*
+
+
+
+The session says:
+
+"Okay, I know about this object. I'll save it when you tell me."
+
+
+
+Still nothing is stored in PostgreSQL.
+
+
+
+**5. Commit**
+
+*db.commit()*
+
+
+
+Now SQLAlchemy generates SQL similar to:
+
+*INSERT INTO students(name, age, course)*
+
+*VALUES ('Agney', 21, 'AI \& ML');*
+
+
+
+This is finally executed in PostgreSQL.
+
+
+
+**6. Refresh**
+
+*db.refresh(student)*
+
+
+
+Suppose PostgreSQL created:
+
+id = 1
+
+
+
+Before refresh:
+
+*student.id*
+
+None
+
+
+
+After refresh:
+
+*student.id*
+
+1
+
+
+
+The Python object now contains the latest values from the database.
+
+
+
+**7. Return the response**
+
+
+
+FastAPI returns:
+
+*{*
+
+&#x20;   *"id": 1,*
+
+&#x20;   *"name": "Agney",*
+
+&#x20;   *"age": 21,*
+
+&#x20;   *"course": "AI \& ML"*
+
+*}*
+
+
+
+The complete flow
+
+Client
+
+&#x20;  │
+
+&#x20;  ▼
+
+FastAPI Router
+
+&#x20;  │
+
+&#x20;  ▼
+
+Pydantic validates request
+
+&#x20;  │
+
+&#x20;  ▼
+
+Create Student object
+
+&#x20;  │
+
+&#x20;  ▼
+
+db.add(student)
+
+&#x20;  │
+
+&#x20;  ▼
+
+db.commit()
+
+&#x20;  │
+
+&#x20;  ▼
+
+PostgreSQL stores row
+
+&#x20;  │
+
+&#x20;  ▼
+
+db.refresh(student)
+
+&#x20;  │
+
+&#x20;  ▼
+
+Return JSON Response
+
+
+
+##### **ADD** *from\_attributes=True* **to app/schemas/students.py**
+
+
+
+*from\_attributes = True* tells Pydantic:
+
+
+
+"If you receive a SQLAlchemy object, **read its attributes** (student.name, student.age, etc.) and **convert it into the response model**."
+
+
+
+Without this line, FastAPI would complain because it doesn't know how to convert a SQLAlchemy model into a StudentResponse.
+
+
+
+#### **Step 2: Inject the Database Session**
+
+
+
+Your current endpoint is:
+
+*@router.post("/students")*
+
+*def create\_student(student: StudentCreate):*
+
+
+
+It only knows about the incoming request (student).
+
+To save data in PostgreSQL, it also needs **access to the database session**.
+
+
+
+Update it to:
+
+*from sqlalchemy.orm import Session*
+
+*from fastapi import Depends*
+
+*from app.database import get\_db*
+
+
+
+*@router.post("/students", response\_model=StudentResponse)*
+
+*def create\_student(*
+
+&#x20;   *student: StudentCreate,*
+
+&#x20;   *db: Session = Depends(get\_db)*
+
+*):*
+
+
+
+**Let's understand every new line**
+
+**1.**
+
+*from sqlalchemy.orm import Session*
+
+
+
+Session is the **object** through which **SQLAlchemy communicates with PostgreSQL.**
+
+Think of it as your conversation with the database.
+
+
+
+Without a session, you can't:
+
+add()
+
+commit()
+
+query()
+
+delete()
+
+
+
+**2.**
+
+*from fastapi import Depends*
+
+
+
+Depends tells FastAPI:
+
+"Before running this endpoint, give me whatever get\_db() returns."
+
+It's FastAPI's **dependency injection system.**
+
+
+
+**3.**
+
+*from app.database import get\_db*
+
+
+
+Remember this function?
+
+*def get\_db():*
+
+&#x20;   *db = SessionLocal()*
+
+&#x20;   *try:*
+
+&#x20;       *yield db*
+
+&#x20;   *finally:*
+
+&#x20;       *db.close()*
+
+
+
+Every request gets:
+
+a fresh database session,
+
+uses it during the request,
+
+and then automatically closes it.
+
+
+
+This prevents connection leaks.
+
+
+
+**4.**
+
+*db: Session = Depends(get\_db)*
+
+
+
+This line means:
+
+"FastAPI, please **call get\_db()** and **pass the resulting Session object into the db parameter.**"
+
+
+
+So when a request comes in, it's effectively like this:
+
+*db = SessionLocal()*
+
+*StudentCreate(student, db)*
+
+
+
+When the request finishes:
+
+*db.close()*
+
+FastAPI handles that automatically.
+
