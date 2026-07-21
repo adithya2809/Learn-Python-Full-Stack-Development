@@ -2392,3 +2392,1086 @@ When the request finishes:
 
 FastAPI handles that automatically.
 
+
+
+**Why do we use Depends(get\_db) instead of SessionLocal()?**
+
+
+
+A strong answer would be:
+
+We use *Depends(get\_db)* because FastAPI's dependency injection **automatically creates a database session** for each request and closes it afterward. This **avoids repeating session-management code in every endpoint**, **prevents connection leaks**, and **keeps the code clean, reusable, and easier to maintain.**
+
+
+
+
+
+#### **STEP 3**
+
+First, import your SQLAlchemy model at the top of student.py:
+
+
+
+*from app.models import Student*
+
+
+
+Then, inside create\_student(), replace the dictionary creation with:
+
+
+
+*db\_student = Student(*
+
+&#x20;   *name=student.name,*
+
+&#x20;   *age=student.age,*
+
+&#x20;   *course=student.course*
+
+*)*
+
+
+
+Stop there.
+
+
+
+❌ Don't add db.add() yet.
+
+**QUESTION:**
+
+Why don't we directly save the *StudentCreate* object (*student*) into the database? Why do we create a new *Student* object (*db\_student*) instead?
+
+
+
+*StudentCreate* is a **Pydantic model** used only for **request validation**. It doesn't represent a database table or know how to perform database operations.
+
+The *Student* class is a **SQLAlchemy ORM model** mapped to the *students table*, so SQLAlchemy can **track it, generate SQL statements**, and **persist it to PostgreSQL.**
+
+
+
+#### **Step 4:** *db.add(db\_student)*
+
+
+
+Write this immediately after creating the Student object:
+
+
+
+*db\_student = Student(*
+
+&#x20;   *name=student.name,*
+
+&#x20;   *age=student.age,*
+
+&#x20;   *course=student.course*
+
+*)*
+
+*db.add(db\_student)*
+
+
+
+What actually happens?
+
+
+
+**Suppose you have:**
+
+*db\_student = Student(*
+
+&#x20;   *name="Agney",*
+
+&#x20;   *age=21,*
+
+&#x20;   *course="AI \& ML"*
+
+*)*
+
+**This object exists only in Python memory.**
+
+
+
+**RAM**
+
+│
+
+└── Student Object
+
+&#x20;     name = Agney
+
+&#x20;     age = 21
+
+&#x20;     course = AI \& ML
+
+
+
+**When you execute:**
+
+*db.add(db\_student)*
+
+
+
+**SQLAlchemy tells the Session:**
+
+"Start tracking this object. I may want to save it."
+
+Notice the wording.
+
+
+
+**It doesn't say:**
+
+"Insert this into PostgreSQL."
+
+
+
+**It says:**
+
+"Track this object."
+
+Inside the Session
+
+
+
+**Think of the Session as a manager.**
+
+
+
+Before add():
+
+
+
+Session
+
+
+
+(No objects)
+
+
+
+After:
+
+
+
+Session
+
+
+
+└── Student Object
+
+
+
+The Session now knows:
+
+this object exists
+
+it belongs to the students table
+
+it should eventually be inserted
+
+
+
+**But...**
+
+Has PostgreSQL received anything?
+
+**❌ No.**
+
+No SQL has been executed yet.
+
+
+
+**Imagine it like an email**
+
+
+
+**You write an email.**
+
+To: Professor
+
+Subject: Assignment
+
+Body:
+
+Hello Sir...
+
+Have you sent it?
+
+**No.**
+
+
+
+It's only in the Drafts folder.
+
+*db.add()* is exactly like putting the email into Drafts.
+
+Only when you click Send does it actually leave your computer.
+
+*db.commit()* is that Send button.
+
+
+
+**How SQLAlchemy sees it**
+
+Object states are an advanced concept, but it's good to know them early.
+
+
+
+**When you create:**
+
+*db\_student = Student(...)*
+
+
+
+**State:**
+
+Transient
+
+Not known to SQLAlchemy.
+
+
+
+**After:**
+
+*db.add(db\_student)*
+
+
+
+**State:**
+
+Pending
+
+Known to SQLAlchemy, but not yet in PostgreSQL.
+
+
+
+**After:**
+
+*db.commit()*
+
+
+
+**State:**
+
+Persistent
+
+Stored in PostgreSQL.
+
+
+
+***db.add()* only registers the SQLAlchemy object with the current Session. The object is tracked in memory, but no SQL INSERT statement has been sent to PostgreSQL. The record is only written to the database when db.commit() is executed.**
+
+
+
+
+
+#### **Step 5:** *db.commit()*
+
+Now add the next line:
+
+
+
+*db\_student = Student(*
+
+&#x20;   *name=student.name,*
+
+&#x20;   *age=student.age,*
+
+&#x20;   *course=student.course*
+
+*)*
+
+
+
+*db.add(db\_student)*
+
+*db.commit()*
+
+
+
+What happens internally?
+
+
+
+Before commit():
+
+Python Object
+
+&#x20;     │
+
+&#x20;     ▼
+
+SQLAlchemy Session
+
+&#x20;     │
+
+&#x20;     ▼
+
+(PostgreSQL has received NOTHING)
+
+
+
+When you call:
+
+*db.commit()*
+
+
+
+SQLAlchemy checks:
+
+"What changes have I been tracking?"
+
+
+
+It sees:
+
+✅ One new Student object.
+
+It then generates SQL automatically.
+
+
+
+You never wrote SQL, but SQLAlchemy creates something like:
+
+*INSERT INTO students (name, age, course)*
+
+*VALUES ('Agney', 21, 'AI \& ML');*
+
+
+
+This SQL is sent through:
+
+SQLAlchemy
+
+&#x20;    │
+
+&#x20;    ▼
+
+psycopg
+
+&#x20;    │
+
+&#x20;    ▼
+
+PostgreSQL
+
+
+
+Finally, PostgreSQL executes the query and permanently stores the row.
+
+
+
+**Visualizing the Flow**
+
+Student Object
+
+&#x20;      │
+
+&#x20;      ▼
+
+db.add()
+
+&#x20;      │
+
+&#x20;      ▼
+
+Session (Pending)
+
+&#x20;      │
+
+&#x20;      ▼
+
+db.commit()
+
+&#x20;      │
+
+&#x20;      ▼
+
+SQL Generated
+
+&#x20;      │
+
+&#x20;      ▼
+
+psycopg
+
+&#x20;      │
+
+&#x20;      ▼
+
+PostgreSQL
+
+&#x20;      │
+
+&#x20;      ▼
+
+Row Saved
+
+
+
+**WHAT DOES db.commit() DO?**
+db.commit() **commits the current transaction**. SQLAlchemy converts all pending changes in the Session into SQL statements, sends them to PostgreSQL, and permanently saves them. If any operation in the transaction fails before the commit completes, the transaction is rolled back to maintain database consistency.
+
+
+
+**SUPPOSE:**
+
+*db.add(student1)*
+
+*db.add(student2)*
+
+*db.add(student3)*
+
+*db.commit()*
+
+
+
+**Question:**
+
+How many SQL INSERT statements will SQLAlchemy execute?
+
+What happens internally?
+
+
+
+Suppose you write:
+
+*student1 = Student(name="A", age=20, course="AI")*
+
+*student2 = Student(name="B", age=21, course="CSE")*
+
+*student3 = Student(name="C", age=22, course="ECE")*
+
+
+
+*db.add(student1)*
+
+*db.add(student2)*
+
+*db.add(student3)*
+
+
+
+*db.commit()*
+
+
+
+Before commit()
+
+The Session contains:
+
+
+
+Session
+
+│
+
+├── student1 (Pending)
+
+├── student2 (Pending)
+
+└── student3 (Pending)
+
+Nothing has reached PostgreSQL yet.
+
+
+
+When commit() runs
+
+
+
+SQLAlchemy generates three SQL statements:
+
+*INSERT INTO students (...);*
+
+*INSERT INTO students (...);*
+
+*INSERT INTO students (...);*
+
+
+
+*COMMIT;*
+
+
+
+So your answer "Three INSERTs" is correct.
+
+
+
+Here's the interesting part
+
+
+
+Suppose the first two inserts succeed, but the third one fails because of an error.
+
+INSERT student1 ✅
+
+INSERT student2 ✅
+
+INSERT student3 ❌
+
+
+
+Will PostgreSQL keep the first two students?
+
+**No.**
+
+
+
+Because everything is inside one transaction.
+
+
+
+The database performs an automatic:
+
+*ROLLBACK;*
+
+
+
+**Result:**
+
+Student1 ❌
+
+Student2 ❌
+
+Student3 ❌
+
+
+
+Nothing is saved.
+
+
+
+This is one of the **ACID properties** you studied:
+
+**Atomicity — either all operations succeed, or none of them do.**
+
+
+
+
+
+**Now for the last line**
+
+Only one line remains:
+
+
+
+*db.refresh(db\_student)*
+
+
+
+Many beginners memorize this line without understanding it.
+
+
+
+I want you to understand it.
+
+Consider this code:
+
+*db\_student = Student(*
+
+&#x20;   *name="Agney",*
+
+&#x20;   *age=21,*
+
+&#x20;   *course="AI \& ML"*
+
+*)*
+
+
+
+*db.add(db\_student)*
+
+*db.commit()*
+
+
+
+After the commit finishes, PostgreSQL automatically generates:
+
+id = 1
+
+
+
+**❓Question**
+
+Where is this id = 1 generated?
+
+
+
+A. Python (Student object)
+
+B. SQLAlchemy Session
+
+C. PostgreSQL
+
+
+
+The correct answer is:
+
+✅ C. PostgreSQL
+
+
+
+Look at your model:
+
+
+
+*class Student(Base):*
+
+&#x20;   *\_\_tablename\_\_ = "students"*
+
+
+
+&#x20;   *id = Column(Integer, primary\_key=True, index=True)*
+
+&#x20;   *name = Column(String(100))*
+
+&#x20;   *age = Column(Integer)*
+
+&#x20;   *course = Column(String(100))*
+
+
+
+Notice something?
+
+
+
+We never wrote:
+
+
+
+id = 1
+
+or
+
+id = generate\_id()
+
+
+
+The model only says:
+
+"This column is the primary key."
+
+
+
+It does not decide what the value will be.
+
+What actually happens?
+
+
+
+When you do:
+
+*db\_student = Student(*
+
+&#x20;   *name="Agney",*
+
+&#x20;   *age=21,*
+
+&#x20;   *course="AI \& ML"*
+
+*)*
+
+
+
+The object looks like:
+
+*id = None*
+
+*name = Agney*
+
+*age = 21*
+
+*course = AI \& ML*
+
+
+
+Notice:
+
+There is no ID yet.
+
+
+
+Then you execute:
+
+*db.commit()*
+
+
+
+SQLAlchemy sends:
+
+*INSERT INTO students (name, age, course)*
+
+*VALUES ('Agney', 21, 'AI \& ML');*
+
+
+
+Now PostgreSQL receives it.
+
+
+
+Your table might internally look like this:
+
+id	name	age	course
+
+1	Agney	21	AI \& ML
+
+
+
+Who decided that the ID is 1?
+
+**PostgreSQL.**
+
+It manages the auto-incrementing primary key.
+
+
+
+**Then why do we need db.refresh()?**
+
+Here's the important part.
+
+
+
+After the commit:
+
+
+
+**In PostgreSQL**
+
+id = 1
+
+**But in Python...**
+
+Your object may still be:
+
+*id = None*
+
+
+
+because Python hasn't asked PostgreSQL for the updated row yet.
+
+
+
+So we execute:
+
+*db.refresh(db\_student)*
+
+
+
+This tells SQLAlchemy:
+
+"Go back to PostgreSQL and reload this object with the latest values."
+
+
+
+After the refresh:
+
+*id = 1*
+
+*name = Agney*
+
+*age = 21*
+
+*course = AI \& ML*
+
+
+
+Now the Python object and the database row are synchronized.
+
+
+
+**A simple analogy**
+
+Imagine you submit an online job application.
+
+
+
+You fill in:
+
+Name
+
+Email
+
+Resume
+
+
+
+You don't choose your application number.
+
+After submission, the company replies:
+
+Application ID: 1042
+
+The company generated that ID—not you.
+
+db.refresh() is like checking your application portal to retrieve the assigned application ID.
+
+
+
+**🎯 Final CRUD code**
+
+
+
+Once you've understood refresh(), your create\_student() function will look like this:
+
+
+
+*@router.post("/students", response\_model=StudentResponse)*
+
+*def create\_student(*
+
+&#x20;   *student: StudentCreate,*
+
+&#x20;   *db: Session = Depends(get\_db)*
+
+*):*
+
+&#x20;   *db\_student = Student(*
+
+&#x20;       *name=student.name,*
+
+&#x20;       *age=student.age,*
+
+&#x20;       *course=student.course*
+
+&#x20;   *)*
+
+
+
+&#x20;   *db.add(db\_student)*
+
+&#x20;   *db.commit()*
+
+&#x20;   *db.refresh(db\_student)*
+
+
+
+&#x20;   *return db\_student*
+
+
+
+#### **Your Mental Model (Keep This Forever)**
+
+Create Python Object
+
+&#x20;       │
+
+&#x20;       ▼
+
+db.add()
+
+&#x20;       │
+
+&#x20;       ▼
+
+Session tracks object
+
+&#x20;       │
+
+&#x20;       ▼
+
+db.commit()
+
+&#x20;       │
+
+&#x20;       ▼
+
+SQL INSERT executes
+
+&#x20;       │
+
+&#x20;       ▼
+
+PostgreSQL generates id
+
+&#x20;       │
+
+&#x20;       ▼
+
+db.refresh()
+
+&#x20;       │
+
+&#x20;       ▼
+
+Python object updated with database values
+
+&#x20;       │
+
+&#x20;       ▼
+
+Return response
+
+
+
+#### **Step 6: Replace the Entire create\_student() Function**
+
+
+
+Replace your current function with this:
+
+
+
+*from sqlalchemy.orm import Session*
+
+*from fastapi import Depends*
+
+*from app.database import get\_db*
+
+*from app.models import Student*
+
+
+
+*@router.post("/students", response\_model=StudentResponse, status\_code=status.HTTP\_201\_CREATED)*
+
+*def create\_student(*
+
+&#x20;   *student: StudentCreate,*
+
+&#x20;   *db: Session = Depends(get\_db)*
+
+*):*
+
+&#x20;   *db\_student = Student(*
+
+&#x20;       *name=student.name,*
+
+&#x20;       *age=student.age,*
+
+&#x20;       *course=student.course*
+
+&#x20;   *)*
+
+
+
+&#x20;   *db.add(db\_student)*
+
+&#x20;   *db.commit()*
+
+&#x20;   *db.refresh(db\_student)*
+
+
+
+&#x20;   *return db\_student*
+
+
+
+##### **Now let's test it**
+
+
+
+Start your server:
+
+*uvicorn app.main:app --reload*
+
+
+
+Open:
+
+http://127.0.0.1:8000/docs
+
+
+
+Use the POST /students endpoint.
+
+
+
+Request body:
+
+*{*
+
+&#x20; *"name": "Agney",*
+
+&#x20; *"age": 21,*
+
+&#x20; *"course": "AI \& ML"*
+
+*}*
+
+Expected Response
+
+*{*
+
+&#x20; *"id": 1,*
+
+&#x20; *"name": "Agney",*
+
+&#x20; *"age": 21,*
+
+&#x20; *"course": "AI \& ML"*
+
+*}*
+
+
+
+Notice:
+
+You never sent:
+
+"id": 1
+
+
+
+**PostgreSQL** generated it.
+
+
+
+##### **Verify in PostgreSQL**
+
+
+
+Run:
+
+*SELECT \* FROM students;*
+
+
+
+You should see something like:
+
+id	name	age	course
+
+1	Agney	21	AI \& ML
+
+
+
+This confirms the entire pipeline is working:
+
+
+
+Postman
+
+&#x20;   │
+
+&#x20;   ▼
+
+FastAPI
+
+&#x20;   │
+
+&#x20;   ▼
+
+Pydantic Validation
+
+&#x20;   │
+
+&#x20;   ▼
+
+SQLAlchemy Model
+
+&#x20;   │
+
+&#x20;   ▼
+
+Session
+
+&#x20;   │
+
+&#x20;   ▼
+
+PostgreSQL
+
+
+
+
+
