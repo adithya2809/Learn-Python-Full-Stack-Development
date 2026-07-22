@@ -738,7 +738,7 @@ This is perfect for PATCH because we don't know in advance which fields the clie
 
 &#x20;       *datail="Student Not Found"*
 
-&#x20;   *)*  
+&#x20;   *)*
 
 &#x20;   *update\_data=patch\_student.model\_dump(exclude\_unset=True)*
 
@@ -850,7 +850,7 @@ db.commit()
 
 &#x20;   *student=db.query(Student).filter(Student.id==id).first()*
 
-&#x20;   *if student is None:*    
+&#x20;   *if student is None:*
 
 &#x20;       *raise HTTPException(*
 
@@ -864,11 +864,41 @@ db.commit()
 
 &#x20;   *db.commit()*
 
-&#x20;   
+&#x20;
 
 &#x20;   *return{*
 
 &#x20;               *"message":"student deleted successfully"*
 
 &#x20;           *}*
+
+
+
+
+
+This introduces an important SQLAlchemy concept: object states.
+
+An ORM object can be in different states:
+
+
+
+**Transient** → Created in Python, not added to a session.
+
+**Pending** → Added with db.add(), waiting for commit().
+
+**Persistent** → Exists in the database and is tracked by the Session.
+
+**Dirty** → Persistent object whose attributes have changed.
+
+**Deleted** → Marked for deletion; the row is removed on commit().
+
+**Detached** → No longer associated with a Session.
+
+
+
+Understanding these states helps explain why SQLAlchemy behaves the way it does.
+
+
+
+# **PHASE-2 COMPLETED**
 
