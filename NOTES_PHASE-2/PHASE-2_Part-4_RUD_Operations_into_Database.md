@@ -530,3 +530,345 @@ or timestamps like updated\_at that PostgreSQL updates automatically.
 
 It guarantees that the **object you return reflects exactly what's stored in the database.**
 
+
+
+#### **THE PATCH ENDPOINT**
+
+**How do you think we can update only the fields that the client actually sent, while leaving the others unchanged?**
+
+Pydantic has a **method specifically designed for this use case.**
+
+##### **The method is:**
+
+***model\_dump(exclude\_unset=True)***
+
+
+
+Since you're using Pydantic v2, this is the correct method.
+
+(In Pydantic v1 it was .dict(exclude\_unset=True).)
+
+
+
+**Let's understand what it does**
+
+
+
+Suppose your PATCH schema is:
+
+*class StudentPatch(BaseModel):*
+
+&#x20;   *name: str | None = None*
+
+&#x20;   *age: int | None = None*
+
+&#x20;   *course: str | None = None*
+
+
+
+The client sends:
+
+*{*
+
+&#x20;   *"age": 22*
+
+*}*
+
+
+
+Internally, the object becomes:
+
+
+
+*student\_patch = StudentPatch(*
+
+&#x20;   *name=None,*
+
+&#x20;   *age=22,*
+
+&#x20;   *course=None*
+
+*)*
+
+
+
+Now imagine we do:
+
+*student\_patch.model\_dump()*
+
+
+
+We get:
+
+
+
+*{*
+
+&#x20;   *"name": None,*
+
+&#x20;   *"age": 22,*
+
+&#x20;   *"course": None*
+
+*}*
+
+
+
+If we updated using this dictionary, we'd accidentally erase the name and course.
+
+
+
+Now use exclude\_unset=True
+
+*student\_patch.model\_dump(exclude\_unset=True)*
+
+
+
+Result:
+
+*{*
+
+&#x20;   *"age": 22*
+
+*}*
+
+
+
+Notice the difference.
+
+Only the fields that the client actually sent are included.
+
+
+
+**Then updating becomes easy**
+
+
+
+Suppose we write:
+
+*update\_data = student\_patch.model\_dump(exclude\_unset=True)*
+
+
+
+Now:
+
+*update\_data*
+
+
+
+contains:
+
+*{*
+
+&#x20;   *"age": 22*
+
+*}*
+
+
+
+We can loop through it:
+
+*for key, value in update\_data.items():*
+
+&#x20;   *setattr(student, key, value)*
+
+
+
+**What is setattr()?**
+
+
+
+This is another useful Python function.
+
+
+
+Instead of writing:
+
+
+
+*student.age = 22*
+
+or
+
+*student.name = "Agney"*
+
+
+
+we can do it dynamically:
+
+*setattr(student, "age", 22)*
+
+
+
+Python interprets that as:
+
+*student.age = 22*
+
+
+
+Likewise:
+
+*setattr(student, "course", "CSE")*
+
+
+
+becomes:
+
+*student.course = "CSE"*
+
+This is perfect for PATCH because we don't know in advance which fields the client will send.
+
+
+
+##### **THE COMPLETE PATCH ENDPOINT**
+
+
+
+*@router.patch("/students/{id}",response\_model=StudentResponse)*
+
+*def patch\_student\_update(id:int,patch\_student:StudentPatch,db: Session=Depends(get\_db)):*
+
+&#x20;   *student=db.query(Student).filter(Student.id==id).first()*
+
+&#x20;   *if student is None:*
+
+&#x20;       *raise HTTPException(*
+
+&#x20;       *status\_code=status.HTTP\_404\_NOT\_FOUND,*
+
+&#x20;       *datail="Student Not Found"*
+
+&#x20;   *)*  
+
+&#x20;   *update\_data=patch\_student.model\_dump(exclude\_unset=True)*
+
+&#x20;   *for key,pair in update\_data.items():*
+
+&#x20;       *setattr(student,key,pair)*
+
+
+
+&#x20;   *db.commit()*
+
+&#x20;   *db.refresh(student)*
+
+&#x20;   *return student*
+
+
+
+
+
+#### **THE DELETE ENDPOINT**
+
+
+
+###### **Step 1: Fetch the Student**
+
+Just like PUT and PATCH, the first step is:
+
+*student = db.query(Student).filter(Student.id == id).first()*
+
+
+
+###### **Step 2: Delete the Object**
+
+
+
+Once we have the student:
+
+*student = db.query(Student).filter(Student.id == id).first()*
+
+
+
+SQLAlchemy provides a method:
+
+*db.delete(student)*
+
+
+
+Notice something interesting.
+
+We're not deleting by ID.
+
+We're deleting the ORM object.
+
+That's because the Session is tracking that object.
+
+
+
+###### **Step 3: Commit**
+
+
+
+**After:**
+
+*db.delete(student)*
+
+
+
+Is the row already removed from PostgreSQL?
+
+
+
+Or do we still need:
+
+db.commit()
+
+
+
+Just like:
+
+db.add()
+
+
+
+doesn't immediately insert,
+
+
+
+db.delete()
+
+
+
+doesn't immediately delete.
+
+
+
+The transaction is finalized only after:
+
+
+
+db.commit()
+
+
+
+##### **THE COMPLETE ENDPOINT**
+
+*@router.delete("/students/{id}",status\_code=status.HTTP\_204\_NO\_CONTENT)*
+
+*def delete\_student(id:int,db:Session=Depends(get\_db)):*
+
+&#x20;   *student=db.query(Student).filter(Student.id==id).first()*
+
+&#x20;   *if student is None:*    
+
+&#x20;       *raise HTTPException(*
+
+&#x20;           *status\_code=status.HTTP\_404\_NOT\_FOUND,*
+
+&#x20;           *detail="Student Not Found"*
+
+&#x20;       *)*
+
+&#x20;   *db.delete(student)*
+
+&#x20;   *db.commit()*
+
+&#x20;   
+
+&#x20;   *return{*
+
+&#x20;               *"message":"student deleted successfully"*
+
+&#x20;           *}*
+
