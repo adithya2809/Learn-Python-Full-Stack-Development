@@ -4,6 +4,7 @@ from fastapi import APIRouter
 from app.schemas.students import StudentResponse
 from app.schemas.students import StudentUpdate
 from app.schemas.students import StudentCreate
+from app.schemas.students import StudentPatch
 from fastapi import status
 
 from sqlalchemy.orm import Session #Session is the object through which SQLAlchemy communicates with PostgreSQL.
@@ -91,32 +92,34 @@ def update_student(id:int,student_update:StudentUpdate,db: Session=Depends(get_d
     db.refresh(student)
 
     return student
-@router.patch("/students/{id}")
-def patch_student(id:int,student:StudentUpdate):
-    for existing_student in students_db:
-        if student.name is not None:
-            existing_student["name"]=student.name
-        if student.age is not None:
-            existing_student["age"]=student.age
-        if student.branch is not None:
-            existing_student["branch"]=student.branch
-        if student.stats is not None:    
-            existing_student["stats"]=student.stats
-        return students_db 
-    raise HTTPException(
+@router.patch("/students/{id}",response_model=StudentResponse)
+def patch_student_update(id:int,patch_student:StudentPatch,db: Session=Depends(get_db)):
+    student=db.query(Student).filter(Student.id==id).first()
+    if student is None:
+        raise HTTPException(
         status_code=status.HTTP_404_NOT_FOUND,
         datail="Student Not Found"
-    )       
+    )  
+    update_data=patch_student.model_dump(exclude_unset=True)
+    for key,pair in update_data.items():
+        setattr(student,key,pair)
 
-@router.delete("students/{id}")
-def delete_student(id:int):
-    for student in students_db:
-        if student["id"]==id:
-            students_db.remove(student)
-            return{
-                "message":"student deleted successfully"
-            }
+    db.commit()
+    db.refresh(student)
+    return student
+
+@router.delete("/students/{id}",status_code=status.HTTP_204_NO_CONTENT)
+def delete_student(id:int,db:Session=Depends(get_db)):
+    student=db.query(Student).filter(Student.id==id).first()
+    if student is None:    
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Student Not Found"
         )
+    db.delete(student)
+    db.commit()
+    
+    return{
+                "message":"student deleted successfully"
+            }
+    
