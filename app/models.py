@@ -1,6 +1,5 @@
-from sqlalchemy import Column, Integer, String
+from sqlalchemy import Column, Integer, String,Boolean
 from app.database import Base
-from sqlalchemy import Boolean
 #creating table into the database
 class Student(Base):
     __tablename__="students"
@@ -16,6 +15,6 @@ class users(Base):
     id=Column(Integer,primary_key=True,index=True)
     username=Column(String(50),unique=True,nullable=False,index=True)
     email=Column(String(100),nullable=False,unique=True,index=True)
-    hashed_password=Column(String(100),nullable=False)
+    hashed_password=Column(String,nullable=False)
     is_active=Column(Boolean,default=True)
     role=Column(String(50),default="user")

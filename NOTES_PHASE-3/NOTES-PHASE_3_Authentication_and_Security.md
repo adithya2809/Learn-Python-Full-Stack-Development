@@ -583,7 +583,7 @@ That's already useful information for an attacker.
 
 
 
-##### **Enter Salt** 
+##### **Enter Salt**
 
 
 
@@ -1357,9 +1357,9 @@ app/
 
 ├── models.py
 
-│     
+│
 
-│               
+│
 
 │
 
@@ -1726,6 +1726,514 @@ FastAPI
 This separation of responsibilities is called **Separation of Concerns**, and it's a key **software engineering principle**.
 
 
+
+#### **Lesson 6 – Pydantic Schemas for Authentication**
+
+
+
+Think back to Phase 1.
+
+
+
+You learned:
+
+SQLAlchemy Models → represent database tables
+
+Pydantic Schemas → represent API data
+
+
+
+These are different responsibilities.
+
+
+
+**Question**
+
+A user wants to register.
+
+
+
+They send:
+
+*{*
+
+&#x20;   *"username": "agney",*
+
+&#x20;   *"email": "agney@gmail.com",*
+
+&#x20;   *"password": "Hello@123"*
+
+*}*
+
+
+
+Should the client send:
+
+*{*
+
+&#x20;   *"hashed\_password": "$2b$12$..."*
+
+*}*
+
+❌ No.
+
+
+
+Why?
+
+Because the client doesn't know how to hash passwords.
+
+
+
+Only the **server** does.
+
+
+
+**Flow of Registration:**
+
+Client
+
+&#x20;│
+
+&#x20;│ username
+
+&#x20;│ email
+
+&#x20;│ password
+
+&#x20;▼
+
+FastAPI
+
+&#x20;│
+
+&#x20;│ Validate Data (Pydantic)
+
+&#x20;▼
+
+Hash Password
+
+&#x20;│
+
+&#x20;▼
+
+SQLAlchemy User Model
+
+&#x20;│
+
+&#x20;▼
+
+PostgreSQL
+
+
+
+Notice something:
+
+The client sends password.
+
+
+
+The database stores hashed\_password.
+
+They are different.
+
+That's why we need different schemas.
+
+
+
+##### **Schema 1 – UserCreate**
+
+
+
+Used when the user registers.
+
+
+
+*class UserCreate(BaseModel):*
+
+&#x20;   *username: str*
+
+&#x20;   *email: str*
+
+&#x20;   *password: str*
+
+
+
+Incoming JSON:
+
+*{*
+
+&#x20;   *"username": "agney",*
+
+&#x20;   *"email": "agney@gmail.com",*
+
+&#x20;   *"password": "Hello@123"*
+
+*}*
+
+
+
+This schema is only for receiving data.
+
+
+
+##### **Schema 2 – UserLogin**
+
+
+
+Login only needs:
+
+*class UserLogin(BaseModel):*
+
+&#x20;   *username: str*
+
+&#x20;   *password: str*
+
+
+
+Incoming request:
+
+*{*
+
+&#x20;   *"username":"agney",*
+
+&#x20;   *"password":"Hello@123"*
+
+*}*
+
+
+
+Notice:
+
+No email.
+
+No role.
+
+No id.
+
+
+
+Because login doesn't need them.
+
+
+
+##### **Schema 3 – UserResponse**
+
+
+
+Suppose registration succeeds.
+
+
+
+Should we return:
+
+*{*
+
+&#x20;   *"id":1,*
+
+&#x20;   *"username":"agney",*
+
+&#x20;   *"email":"agney@gmail.com",*
+
+&#x20;   *"hashed\_password":"$2b$12$..."*
+
+*}*
+
+
+
+❌ Never.
+
+
+
+Instead:
+
+*class UserResponse(BaseModel):*
+
+&#x20;   *id: int*
+
+&#x20;   *username: str*
+
+&#x20;   *email: str*
+
+
+
+Response:
+
+*{*
+
+&#x20;   *"id":1,*
+
+&#x20;   *"username":"agney",*
+
+&#x20;   *"email":"agney@gmail.com"*
+
+*}*
+
+
+
+No password.
+
+No hash.
+
+
+
+##### **Professional API Design**
+
+Register Request
+
+*{*
+
+&#x20;   *"username":"agney",*
+
+&#x20;   *"email":"agney@gmail.com",*
+
+&#x20;   *"password":"Hello@123"*
+
+*}*
+
+↓
+
+Server hashes password.
+
+↓
+
+Database stores:
+
+id
+
+username
+
+email
+
+hashed\_password
+
+role
+
+is\_active
+
+
+
+↓
+
+Server returns:
+
+*{*
+
+&#x20;   *"id":1,*
+
+&#x20;   *"username":"agney",*
+
+&#x20;   *"email":"agney@gmail.com"*
+
+*}*
+
+
+
+Everything has its **own responsibility.**
+
+
+
+##### **schemas/user.py**
+
+*from pydantic import BaseModel, EmailStr*
+
+
+
+*class UserCreate(BaseModel):*
+
+&#x20;   *username: str*
+
+&#x20;   *email: EmailStr*
+
+&#x20;   *password: str*
+
+
+
+
+
+*class UserLogin(BaseModel):*
+
+&#x20;   *username: str*
+
+&#x20;   *password: str*
+
+
+
+
+
+*class UserResponse(BaseModel):*
+
+&#x20;   *id: int*
+
+&#x20;   *username: str*
+
+&#x20;   *email: EmailStr*
+
+
+
+&#x20;   *class Config:*
+
+&#x20;       *from\_attributes = True*
+
+
+
+💡 Why EmailStr instead of str?
+
+
+
+Earlier I used str to keep the focus on authentication.
+
+In a production project, it's better to use:
+
+*from pydantic import EmailStr*
+
+
+
+because Pydantic **automatically validates** the email format.
+
+
+
+**For example:**
+
+✅ Accepted:
+
+agney@gmail.com
+
+
+
+❌ Rejected:
+
+agney
+
+
+
+FastAPI will automatically return a **422 Validation Error** before your route logic even runs.
+
+
+
+#### **Lesson 7 – Register API**
+
+This is the first endpoint where everything you've learned comes together.
+
+
+
+We'll combine:
+
+✅ SQLAlchemy Model (User)
+
+✅ Pydantic Schema (UserCreate)
+
+✅ Password Hashing (bcrypt)
+
+✅ Database Session
+
+✅ API Endpoint
+
+
+
+##### **Step 1: Create routers/auth.py**
+
+
+
+Your project should now look like this:
+
+app/
+
+│
+
+├── routers/
+
+│     ├── students.py
+
+│     └── auth.py      👈 NEW
+
+
+
+This router will handle everything related to authentication:
+
+Register
+
+Login
+
+Refresh Token (later)
+
+Logout (later)
+
+
+
+###### **Let's design the registration flow.**
+
+
+
+Suppose a user sends:
+
+
+
+*{*
+
+&#x20;   *"username": "agney",*
+
+&#x20;   *"email": "agney@gmail.com",*
+
+&#x20;   *"password": "Hello@123"*
+
+*}*
+
+
+
+What should our API do?
+
+Think step by step.
+
+
+
+Receive Request
+
+&#x20;      │
+
+&#x20;      ▼
+
+Validate Data
+
+&#x20;      │
+
+&#x20;      ▼
+
+Check Username Exists?
+
+&#x20;      │
+
+&#x20;      ▼
+
+Check Email Exists?
+
+&#x20;      │
+
+&#x20;      ▼
+
+Hash Password
+
+&#x20;      │
+
+&#x20;      ▼
+
+Create User Object
+
+&#x20;      │
+
+&#x20;      ▼
+
+Save to Database
+
+&#x20;      │
+
+&#x20;      ▼
+
+Return User Response
+
+
+
+Notice that every step has a purpose.
 
 
 
