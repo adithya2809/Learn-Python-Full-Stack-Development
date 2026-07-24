@@ -9,7 +9,7 @@ class Student(Base):
     age=Column(Integer,nullable=False)
     course=Column(String(100),nullable=False)
 #creating table for authentication
-class users(Base):
+class Users(Base):
     __tablename__="users"
 
     id=Column(Integer,primary_key=True,index=True)

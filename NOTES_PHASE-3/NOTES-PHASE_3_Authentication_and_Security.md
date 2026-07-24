@@ -2237,3 +2237,1114 @@ Notice that every step has a purpose.
 
 
 
+#### **Let's build your first authentication endpoint.**
+
+##### **Step 1: Create routers/auth.py**
+
+
+
+Create a new file:
+
+app/
+
+├── routers/
+
+│     ├── students.py
+
+│     └── auth.py   👈 NEW
+
+
+
+Start with this:
+
+*from fastapi import APIRouter*
+
+
+
+*router = APIRouter(*
+
+&#x20;   *prefix="/auth",*
+
+&#x20;   *tags=\["Authentication"]*
+
+*)*
+
+
+
+**Explanation**
+
+
+
+**Import APIRouter**
+
+*from fastapi import APIRouter*
+
+
+
+Just like in your students.py router.
+
+APIRouter helps us organize related endpoints.
+
+
+
+Instead of putting everything in main.py:
+
+
+
+@app.get(...)
+
+@app.post(...)
+
+@app.put(...)
+
+
+
+we group them.
+
+students.py  → Student APIs
+
+auth.py      → Authentication APIs
+
+
+
+This keeps the project clean.
+
+
+
+**Create the router**
+
+*router = APIRouter(*
+
+&#x20;   *prefix="/auth",*
+
+&#x20;   *tags=\["Authentication"]*
+
+*)*
+
+
+
+prefix="/auth" means every endpoint starts with:
+
+/auth
+
+
+
+For example:
+
+*POST /auth/register*
+
+*POST /auth/login*
+
+*GET  /auth/me*
+
+
+
+
+
+***tags=\["Authentication"]***
+
+
+
+This is only for the **Swagger UI.**
+
+Instead of showing all endpoints together, Swagger **groups** them under:
+
+
+
+Authentication
+
+\-------------
+
+POST /register
+
+POST /login
+
+GET /me
+
+
+
+##### **Step 2: Required Imports**
+
+
+
+Now add these imports.
+
+
+
+*from fastapi import APIRouter, Depends, HTTPException*
+
+*from sqlalchemy.orm import Session*
+
+
+
+*from app.database import get\_db*
+
+*from app.models import User*
+
+*from app.schemas.user import UserCreate, UserResponse*
+
+
+
+###### **Why each import?**
+
+**Depends**
+
+Allows FastAPI to inject the database session.
+
+
+
+Later you'll write:
+
+*db: Session = Depends(get\_db)*
+
+
+
+instead of creating sessions manually.
+
+
+
+**HTTPException**
+
+Instead of:
+
+*print("Email exists")*
+
+
+
+we can return
+
+*raise HTTPException(*
+
+&#x20;   *status\_code=400,*
+
+&#x20;   *detail="Email already registered"*
+
+*)*
+
+
+
+FastAPI automatically converts it into a JSON response.
+
+
+
+**Session**
+
+Represents the **current database transaction.**
+
+
+
+Everything we do—
+
+Query
+
+Insert
+
+Update
+
+Delete
+
+
+
+—uses this session.
+
+
+
+**User**
+
+Our SQLAlchemy model.
+
+Used to interact with the **users table.**
+
+
+
+**UserCreate**
+
+Incoming request.
+
+*{*
+
+&#x20;   *"username":"agney",*
+
+&#x20;   *"email":"agney@gmail.com",*
+
+&#x20;   *"password":"Hello@123"*
+
+*}*
+
+
+
+**UserResponse**
+
+Outgoing response.
+
+*{*
+
+&#x20;   *"id":1,*
+
+&#x20;   *"username":"agney",*
+
+&#x20;   *"email":"agney@gmail.com"*
+
+*}*
+
+
+
+Notice:
+
+No password.
+
+No hash.
+
+
+
+#### **Next Step: Password Hashing**
+
+
+
+Before we can implement POST /auth/register, we need a function that hashes passwords.
+
+
+
+We'll create a dedicated file:
+
+app/
+
+│
+
+├── utils/
+
+│     └── security.py
+
+
+
+This file will contain only authentication utilities.
+
+
+
+Example:
+
+*from passlib.context import CryptContext*
+
+
+
+*pwd\_context = CryptContext(*
+
+&#x20;   *schemes=\["bcrypt"],*
+
+&#x20;   *deprecated="auto"*
+
+*)*
+
+
+
+*def hash\_password(password: str) -> str:*
+
+&#x20;   *return pwd\_context.hash(password)*
+
+
+
+*def verify\_password(plain\_password: str, hashed\_password: str) -> bool:*
+
+&#x20;   *return pwd\_context.verify(plain\_password, hashed\_password)*
+
+
+
+##### **What is passlib?**
+
+
+
+passlib is a Python library that provides **secure password hashing.**
+
+Instead of writing complex bcrypt code yourself:
+
+\# Complex low-level bcrypt usage
+
+
+
+You simply write:
+
+*hashed = pwd\_context.hash(password)*
+
+and
+
+*pwd\_context.verify(password, hashed)*
+
+
+
+It handles the hashing and verification securely.
+
+
+
+Your Code
+
+&#x20;    │
+
+&#x20;    ▼
+
+Passlib
+
+&#x20;    │
+
+&#x20;    ▼
+
+bcrypt Algorithm
+
+&#x20;    │
+
+&#x20;    ▼
+
+Hashed Password
+
+
+
+Why don't we use hashlib?
+
+
+
+This is an interview question.
+
+
+
+Python has:
+
+
+
+import hashlib
+
+
+
+Why not use it?
+
+
+
+Because algorithms like:
+
+SHA-256
+
+MD5
+
+SHA-1
+
+
+
+are designed to be fast.
+
+
+
+Fast hashing is great for file integrity, but terrible for password storage.
+
+
+
+For passwords we want:
+
+Slow hashing ✅
+
+Salting ✅
+
+Adaptive work factor ✅
+
+
+
+That's exactly what bcrypt provides.
+
+
+
+##### **Install Passlib**
+
+*pip install "passlib\[bcrypt]"*
+
+
+
+**Why \[bcrypt]?**
+
+passlib supports many hashing algorithms.
+
+The \[bcrypt] extra **automatically installs** the bcrypt backend so passlib can use it.
+
+
+
+**Why passlib\[bcrypt] instead of just bcrypt?**
+
+We install passlib\[bcrypt] because Passlib provides a **secure** and **convenient password hashing interface**, while the \[bcrypt] extra **installs** the bcrypt backend that Passlib uses under the hood.
+
+
+
+**bcrypt** is the **low-level** hashing library that implements the bcrypt algorithm.
+
+**passlib** is a **higher-level** library that provides a clean, consistent API for password hashing and verification.
+
+
+
+Interview Tip
+
+
+
+One of my favorite interview questions is:
+
+
+
+"If SHA-256 is cryptographically secure, why don't we use it for passwords?"
+
+
+
+The ideal answer is:
+
+
+
+Because SHA-256 is designed to be fast. Fast hashing makes brute-force attacks much more practical. Password hashing algorithms like bcrypt or Argon2 are intentionally slow and include salting and a configurable work factor, making password cracking significantly more expensive.
+
+
+
+**Interview Tip**
+
+One of my favorite interview questions is:
+
+**"If SHA-256 is cryptographically secure, why don't we use it for passwords?"**
+
+
+
+The ideal answer is:
+
+Because SHA-256 is designed to be **fast**. Fast hashing makes **brute-force attacks** much more practical.
+
+Password hashing algorithms like bcrypt or Argon2 are **intentionally slow** and include **salting** and a configurable work factor, making password cracking significantly more expensive.
+
+
+
+#### **Let's write your first security utility**
+
+
+This is a small file, but it's used by almost every authentication endpoint in the application.
+
+
+
+##### **Step 1: Create utils/security.py**
+
+
+
+First, create a new folder:
+
+app/
+
+│
+
+├── utils/
+
+│     └── security.py
+
+
+
+Inside security.py, write:
+
+
+
+*from passlib.context import CryptContext*
+
+
+
+*pwd\_context = CryptContext(*
+
+&#x20;   *schemes=\["bcrypt"],*
+
+&#x20;   *deprecated="auto"*
+
+*)*
+
+
+
+*def hash\_password(password: str) -> str:*
+
+&#x20;   *return pwd\_context.hash(password)*
+
+
+
+*def verify\_password(plain\_password: str, hashed\_password: str) -> bool:*
+
+&#x20;   *return pwd\_context.verify(plain\_password, hashed\_password)*
+
+
+
+**Let's Understand Every Line**
+
+**1. Import**
+
+*from passlib.context import CryptContext*
+
+
+
+CryptContext is like a **manager** for password hashing.
+
+Instead of calling bcrypt directly, we ask the context to:
+
+
+
+Hash passwords
+
+Verify passwords
+
+Manage hashing algorithms
+
+
+
+This makes our code cleaner and easier to maintain.
+
+
+
+**2. Create the Context**
+
+*pwd\_context = CryptContext(*
+
+&#x20;   *schemes=\["bcrypt"],*
+
+&#x20;   *deprecated="auto"*
+
+*)*
+
+
+
+This tells Passlib:
+
+"Use bcrypt for hashing passwords."
+
+
+
+Later, if your company decides to migrate to Argon2, you only change this configuration instead of rewriting your entire authentication system.
+
+
+
+**3. Hash Function**
+
+*def hash\_password(password: str) -> str:*
+
+&#x20;   *return pwd\_context.hash(password)*
+
+
+
+Example:
+
+
+
+Input:
+
+Hello@123
+
+
+
+Output:
+
+$2b$12$H6Wn0v4XJm...
+
+
+
+Notice something:
+
+Every time you run:
+
+*hash\_password("Hello@123")*
+
+
+
+you'll get a different hash because bcrypt automatically generates a **new random salt** each time.
+
+
+
+**4. Verify Function**
+
+*def verify\_password(plain\_password: str, hashed\_password: str) -> bool:*
+
+&#x20;   *return pwd\_context.verify(plain\_password, hashed\_password)*
+
+
+
+Example:
+
+*verify\_password(*
+
+&#x20;   *"Hello@123",*
+
+&#x20;   *"$2b$12$H6Wn0v4XJm..."*
+
+*)*
+
+
+
+Returns:
+
+True
+
+
+
+Wrong password:
+
+*verify\_password(*
+
+&#x20;   *"Hello@321",*
+
+&#x20;   *"$2b$12$H6Wn0v4XJm..."*
+
+*)*
+
+
+
+Returns:
+
+False
+
+
+
+###### **Why Create Separate Functions?**
+
+
+
+Instead of writing:
+
+*pwd\_context.hash(password)*
+
+
+
+everywhere in your code, we create:
+
+*hash\_password(password)*
+
+
+
+Benefits:
+
+Cleaner code
+
+Easier to test
+
+Easier to change algorithms later
+
+Follows the **Single Responsibility Principle (SRP)**
+
+
+
+Let's see if you've fully connected the concepts.
+
+
+
+Suppose the database stores:
+
+$2b$12$AbCdEf123456789...
+
+
+
+The user logs in with:
+
+Hello@123
+
+
+
+**Question:**
+
+During login, does verify\_password():
+
+A. Decrypt the stored hash back into Hello@123
+
+B. Hash the entered password again (using the salt from the stored hash) and compare the results
+
+**ANSWER: B**
+
+
+
+**When the user logs in:**
+
+User enters password
+
+&#x20;       │
+
+&#x20;       ▼
+
+verify\_password()
+
+&#x20;       │
+
+&#x20;       ▼
+
+Extract salt from stored hash
+
+&#x20;       │
+
+&#x20;       ▼
+
+Hash entered password using that salt
+
+&#x20;       │
+
+&#x20;       ▼
+
+Compare hashes
+
+&#x20;       │
+
+&#x20;  ┌────┴────┐
+
+&#x20;  │         │
+
+&#x20;Match    No Match
+
+&#x20;  │         │
+
+&#x20;True     False
+
+
+
+Notice something very important:
+
+❌ We never decrypt the stored hash.
+
+❌ We never recover the original password.
+
+We only **recompute** the hash using the **same salt** and compare the results.
+
+
+
+#### **first production authentication API**
+
+
+
+**Build the POST /auth/register Endpoint**
+
+In the next lesson, we'll write our first production authentication API.
+
+
+
+We'll implement this flow:
+
+
+
+POST /auth/register
+
+&#x20;       │
+
+&#x20;       ▼
+
+Receive UserCreate
+
+&#x20;       │
+
+&#x20;       ▼
+
+Validate Request (Pydantic)
+
+&#x20;       │
+
+&#x20;       ▼
+
+Check Username Exists
+
+&#x20;       │
+
+&#x20;       ▼
+
+Check Email Exists
+
+&#x20;       │
+
+&#x20;       ▼
+
+Hash Password
+
+&#x20;       │
+
+&#x20;       ▼
+
+Create User Object
+
+&#x20;       │
+
+&#x20;       ▼
+
+Save to Database
+
+&#x20;       │
+
+&#x20;       ▼
+
+Return UserResponse
+
+
+
+This is where all the concepts you've learned finally come together into a working endpoint.
+
+
+
+##### **Step 1: Create routers/auth.py**
+
+
+
+Start with these imports.
+
+
+
+*from fastapi import APIRouter, Depends, HTTPException, status*
+
+*from sqlalchemy.orm import Session*
+
+
+
+*from app.database import get\_db*
+
+*from app.models import User*
+
+*from app.schemas.user import UserCreate, UserResponse*
+
+*from app.utils.security import hash\_password*
+
+
+
+*router = APIRouter(*
+
+&#x20;   *prefix="/auth",*
+
+&#x20;   *tags=\["Authentication"]*
+
+*)*
+
+
+
+**Let's Understand Every Import**
+
+
+
+**1. status**
+
+*from fastapi import status*
+
+
+
+Instead of writing:
+
+status\_code=201
+
+
+
+we write:
+
+*status\_code=status.HTTP\_201\_CREATED*
+
+Why?
+
+Because it's more readable.
+
+
+
+Which is clearer?
+
+201
+
+or
+
+HTTP\_201\_CREATED
+
+
+
+Exactly.
+
+Professional code almost always uses the status module.
+
+
+
+**2. get\_db**
+
+*db: Session = Depends(get\_db)*
+
+
+
+Remember our discussion?
+
+Every request gets its own database session.
+
+
+
+FastAPI automatically:
+
+Open Session
+
+&#x20;     ↓
+
+Run Endpoint
+
+&#x20;     ↓
+
+Close Session
+
+
+
+No manual cleanup.
+
+
+
+**3. hash\_password**
+
+
+
+Instead of writing:
+
+pwd\_context.hash(...)
+
+
+
+everywhere,
+
+
+
+we simply call:
+
+*hash\_password(password)*
+
+
+
+Cleaner and reusable.
+
+
+
+Step 2: Create the Endpoint
+
+
+
+Now add this skeleton.
+
+
+
+*@router.post(*
+
+&#x20;   *"/register",*
+
+&#x20;   *response\_model=UserResponse,*
+
+&#x20;   *status\_code=status.HTTP\_201\_CREATED*
+
+*)*
+
+*def register(*
+
+&#x20;   *user: UserCreate,*
+
+&#x20;   *db: Session = Depends(get\_db)*
+
+*):*
+
+&#x20;   *pass*
+
+
+
+Notice that we haven't written any logic yet.
+
+
+
+**Let's Understand This Before Writing Logic**
+
+
+
+**Decorator**
+
+*@router.post("/register")*
+
+
+
+Creates:
+
+POST /auth/register
+
+
+
+because our router prefix is:
+
+prefix="/auth"
+
+
+
+**response\_model**
+
+*response\_model=UserResponse*
+
+
+
+This is extremely important.
+
+Suppose we accidentally do:
+
+return db\_user
+
+
+
+db\_user contains:
+
+id
+
+username
+
+email
+
+hashed\_password
+
+role
+
+is\_active
+
+
+
+Without response\_model, FastAPI would return everything.
+
+
+
+With:
+
+*response\_model=UserResponse*
+
+
+
+FastAPI filters the response to only:
+
+*{*
+
+&#x20; *"id": 1,*
+
+&#x20; *"username": "agney",*
+
+&#x20; *"email": "agney@gmail.com"*
+
+*}*
+
+
+
+This is an extra layer of protection against accidentally exposing sensitive fields.
+
+
+
+**Function Parameters**
+
+*user: UserCreate*
+
+
+
+FastAPI automatically:
+
+Reads JSON
+
+Validates it
+
+Converts it into a UserCreate object
+
+
+
+So instead of:
+
+request\["username"]
+
+
+
+you can simply write:
+
+*user.username*
+
+
+
+Much cleaner.
+
+
+
+
+
