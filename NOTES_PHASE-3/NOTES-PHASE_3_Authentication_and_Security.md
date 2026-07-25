@@ -2714,6 +2714,7 @@ Password hashing algorithms like bcrypt or Argon2 are **intentionally slow** and
 #### **Let's write your first security utility**
 
 
+
 This is a small file, but it's used by almost every authentication endpoint in the application.
 
 
@@ -3331,20 +3332,696 @@ Converts it into a UserCreate object
 
 
 So instead of:
-
 request\["username"]
 
 
 
 you can simply write:
-
 *user.username*
-
-
 
 Much cleaner.
 
 
 
+#### **Building The Business Logic**
 
+##### **Step 1: Check if the Username Already Exists**
+
+
+
+Inside your register() function, add:
+
+*existing\_user = db.query(User).filter(User.username == user.username).first()*
+
+
+
+*if existing\_user:*
+
+&#x20;   *raise HTTPException(*
+
+&#x20;       *status\_code=status.HTTP\_400\_BAD\_REQUEST,*
+
+&#x20;       *detail="Username already exists"*
+
+&#x20;   *)*
+
+
+
+Let's Understand It Line by Line
+
+
+
+**1. Query the Database**
+
+*db.query(User)*
+
+
+
+This means:
+
+"Query the users table."
+
+
+
+Remember:
+
+User → SQLAlchemy model → users table
+
+user (lowercase) → Request data from the client (UserCreate schema)
+
+
+
+This distinction is very important.
+
+
+
+**2. Filter the Rows**
+
+*.filter(User.username == user.username)*
+
+
+
+Suppose the client sends:
+
+*{*
+
+&#x20;   *"username": "agney",*
+
+&#x20;   *"email": "agney@gmail.com",*
+
+&#x20;   *"password": "Hello@123"*
+
+*}*
+
+
+
+This generates a query similar to:
+
+*SELECT \**
+
+*FROM users*
+
+*WHERE username = 'agney';*
+
+
+
+**3. .first()**
+
+*.first()*
+
+
+
+Returns:
+
+the first matching user object
+
+or None if no user exists
+
+
+
+Example:
+
+If the database contains:
+
+
+
+id	username
+
+1	agney
+
+
+
+then:
+
+*existing\_user*
+
+
+
+becomes something like:
+
+*<User id=1 username="agney">*
+
+
+
+If no such user exists:
+
+*existing\_user*
+
+
+
+becomes:
+
+None
+
+
+
+**4. The if**
+
+*if existing\_user:*
+
+
+
+Remember:
+
+None
+
+is treated as False.
+
+
+
+A SQLAlchemy object is treated as True.
+
+
+
+So:
+
+*if existing\_user:*
+
+
+
+means:
+
+"If a user with this username already exists..."
+
+
+
+**5. Raise an Exception**
+
+*raise HTTPException(*
+
+&#x20;   *status\_code=status.HTTP\_400\_BAD\_REQUEST,*
+
+&#x20;   *detail="Username already exists"*
+
+*)*
+
+
+
+FastAPI immediately stops executing the function and returns:
+
+400 Bad Request
+
+
+
+Response:
+
+*{*
+
+&#x20;   *"detail": "Username already exists"*
+
+*}*
+
+
+
+Nothing below this line will execute.
+
+
+
+##### **Step 2: Check if the Email Already Exists**
+
+This is almost identical to the username check.
+
+
+
+Add this immediately after the username check:
+
+*existing\_email = db.query(User).filter(User.email == user.email).first()*
+
+
+
+*if existing\_email:*
+
+&#x20;   *raise HTTPException(*
+
+&#x20;       *status\_code=status.HTTP\_400\_BAD\_REQUEST,*
+
+&#x20;       *detail="Email already registered"*
+
+&#x20;   *)*
+
+Why Check Both Username and Email?
+
+
+
+Imagine this request:
+
+*{*
+
+&#x20;   *"username": "agney123",*
+
+&#x20;   *"email": "agney@gmail.com",*
+
+&#x20;   *"password": "Hello@123"*
+
+*}*
+
+
+
+Suppose:
+
+Username doesn't exist ✅
+
+Email already belongs to another account ❌
+
+
+
+Without this check, the database would reject the insert because of the unique=True constraint on the email column.
+
+
+
+With this check, the user gets a clear response:
+
+*{*
+
+&#x20;   *"detail": "Email already registered"*
+
+*}*
+
+
+
+##### **Step 3: Hash the Password**
+
+
+
+Now we finally use the function you created in utils/security.py.
+
+*hashed\_password = hash\_password(user.password)*
+
+
+
+Let's see what happens internally.
+
+
+
+The client sends:
+
+*{*
+
+&#x20;   *"username": "agney",*
+
+&#x20;   *"email": "agney@gmail.com",*
+
+&#x20;   *"password": "Hello@123"*
+
+*}*
+
+
+
+After this line:
+
+*hashed\_password = hash\_password(user.password)*
+
+
+
+Memory now looks like this:
+
+user.username  → "agney"
+
+user.email     → "agney@gmail.com"
+
+user.password  → "Hello@123"
+
+
+
+hashed\_password
+
+↓
+
+"$2b$12$A9xM...."
+
+
+
+Notice something important:
+
+The original password is still in memory, but we will never store it in the database.
+
+
+
+Only hashed\_password gets saved.
+
+
+
+##### **Step 4: Create the SQLAlchemy Object**
+
+Now create the database object.
+
+
+
+*db\_user = User(*
+
+&#x20;   *username=user.username,*
+
+&#x20;   *email=user.email,*
+
+&#x20;   *hashed\_password=hashed\_password*
+
+*)*
+
+
+
+Notice carefully:
+
+user.password
+
+
+
+❌ is not stored.
+
+
+
+Instead:
+
+*hashed\_password=hashed\_password*
+
+
+
+✅ is stored.
+
+
+
+This is one of the most important security practices in backend development.
+
+
+
+**What's Happening Here?**
+
+
+
+Don't confuse these two:
+
+user
+
+
+
+This is the Pydantic model created from the request body.
+
+
+
+db\_user
+
+
+
+This is the SQLAlchemy model that represents a row in the database.
+
+
+
+Think of the flow like this:
+
+Client JSON
+
+&#x20;     │
+
+&#x20;     ▼
+
+UserCreate (Pydantic)
+
+&#x20;     │
+
+&#x20;     ▼
+
+Hash Password
+
+&#x20;     │
+
+&#x20;     ▼
+
+User (SQLAlchemy)
+
+&#x20;     │
+
+&#x20;     ▼
+
+Database
+
+
+
+##### **Step 5: Add the User to the Session**
+
+*db.add(db\_user)*
+
+What does this do?
+
+
+
+It tells SQLAlchemy:
+
+"I want to insert this object into the database."
+
+
+
+Important:
+
+At this point...
+
+
+
+❌ Nothing has been written to PostgreSQL yet.
+
+
+
+Think of it like adding an item to a shopping cart.
+
+
+
+db\_user
+
+&#x20;  │
+
+&#x20;  ▼
+
+SQLAlchemy Session
+
+&#x20;  │
+
+(Not in database yet)
+
+
+
+##### **Step 6: Commit the Transaction**
+
+*db.commit()*
+
+
+
+This is the line that actually executes the SQL.
+
+
+
+Behind the scenes, SQLAlchemy generates something like:
+
+*INSERT INTO users (*
+
+&#x20;   *username,*
+
+&#x20;   *email,*
+
+&#x20;   *hashed\_password*
+
+*)*
+
+*VALUES (*
+
+&#x20;   *'agney',*
+
+&#x20;   *'agney@gmail.com',*
+
+&#x20;   *'$2b$12$...'*
+
+*);*
+
+
+
+and PostgreSQL permanently stores the row.
+
+
+
+##### **Step 7: Refresh the Object**
+
+Now comes the line that confuses almost everyone.
+
+
+
+*db.refresh(db\_user)*
+
+Why do we need this?
+
+
+
+Suppose your model is:
+
+*class User(Base):*
+
+&#x20;   *id = Column(Integer, primary\_key=True)*
+
+&#x20;   *username = Column(String)*
+
+
+
+Before inserting:
+
+db\_user
+
+
+
+id = None
+
+username = agney
+
+
+
+After:
+
+*db.commit()*
+
+
+
+The database generates:
+
+id = 1
+
+
+
+But your Python object may still not have that new value loaded.
+
+
+
+So:
+
+*db.refresh(db\_user)*
+
+
+
+asks PostgreSQL:
+
+
+
+"Give me the **latest version** of this row."
+
+
+
+Now the object becomes:
+
+db\_user
+
+
+
+id = 1
+
+username = agney
+
+email = agney@gmail.com
+
+
+
+**Real Flow**
+
+Create User Object
+
+&#x20;       │
+
+&#x20;       ▼
+
+db.add()
+
+&#x20;       │
+
+&#x20;       ▼
+
+Session
+
+&#x20;       │
+
+&#x20;       ▼
+
+db.commit()
+
+&#x20;       │
+
+&#x20;       ▼
+
+PostgreSQL assigns ID
+
+&#x20;       │
+
+&#x20;       ▼
+
+db.refresh()
+
+&#x20;       │
+
+&#x20;       ▼
+
+Python object updated
+
+
+
+##### **Step 8: Return the User**
+
+
+
+Finally:
+
+*return db\_user*
+
+
+
+Notice something interesting.
+
+
+
+We're returning:
+
+db\_user
+
+
+
+which contains:
+
+id
+
+username
+
+email
+
+hashed\_password
+
+role
+
+is\_active
+
+
+
+Yet the client receives:
+
+*{*
+
+&#x20;   *"id":1,*
+
+&#x20;   *"username":"agney",*
+
+&#x20;   *"email":"agney@gmail.com"*
+
+*}*
+
+
+
+Why?
+
+
+
+Because we declared:
+
+*response\_model=UserResponse*
+
+
+
+FastAPI automatically removes everything that isn't defined in **UserResponse.**
+
+
+
+This is another safety layer that prevents accidentally exposing sensitive data.
+
+
+
+###### **You've just completed your first production-style authentication endpoint.**
 
