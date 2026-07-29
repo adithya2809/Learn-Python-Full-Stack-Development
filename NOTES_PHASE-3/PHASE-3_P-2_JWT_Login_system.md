@@ -1667,9 +1667,571 @@ We don't return the user object.
 
 
 
-## **Congratulations!**
+#### **Congratulations!**
 
 You've just built a real JWT authentication system.
+
+
+
+
+
+#### **OAuth2PasswordBearer**
+
+
+
+FastAPI provides a helper that **automatically extracts** the token from the Authorization header.
+
+
+
+Create a new file:
+
+app/dependencies/auth.py
+
+
+
+Then add:
+
+*from fastapi.security import OAuth2PasswordBearer*
+
+
+
+*oauth2\_scheme = OAuth2PasswordBearer(*
+
+&#x20;   *tokenUrl="auth/login"*
+
+*)*
+
+
+
+OAuth2PasswordBearer does not:
+
+❌ Generate JWTs
+
+❌ Verify JWTs
+
+❌ Decode JWTs
+
+❌ Log users in
+
+
+
+Its only job is to **extract the Bearer token** from the incoming request.
+
+
+
+**tokenurl**
+
+Many beginners think:
+
+"FastAPI will automatically call /auth/login."
+
+
+
+❌ It doesn't.
+
+
+
+It simply tells Swagger/OpenAPI:
+
+"If someone wants a token, this is the endpoint they should use."
+
+
+
+Get JWT
+
+&#x20;   │
+
+&#x20;   ▼
+
+POST /auth/login
+
+&#x20;   │
+
+&#x20;   ▼
+
+Receive Access Token
+
+&#x20;   │
+
+&#x20;   ▼
+
+Send it as:
+
+Authorization: Bearer <token>
+
+
+
+So tokenUrl is **documentation** and **OpenAPI metadata**, not authentication logic.
+
+
+
+##### **Now let's build get\_current\_user()**
+
+
+
+**Add these imports:**
+
+*from fastapi import Depends, HTTPException, status*
+
+*from fastapi.security import OAuth2PasswordBearer*
+
+*from jose import JWTError, jwt*
+
+
+
+*from sqlalchemy.orm import Session*
+
+
+
+*from app.database import get\_db*
+
+*from app.config import SECRET\_KEY*
+
+*from app.models.user import Users*
+
+
+
+**Then add:**
+
+*oauth2\_scheme = OAuth2PasswordBearer(*
+
+&#x20;   *tokenUrl="auth/login"*
+
+*)*
+
+
+
+**Suppose someone sends this token:**
+
+eyJhbGc...
+
+
+
+What should get\_current\_user() do first after receiving the token?
+
+**Decode and verify the JWT**-This is one of the most important security principles in JWT authentication.
+
+
+
+**The Authentication Pipeline**
+
+Client Request
+
+&#x20;      │
+
+&#x20;      ▼
+
+Extract JWT
+
+&#x20;      │
+
+&#x20;      ▼
+
+Decode JWT
+
+&#x20;      │
+
+&#x20;      ├── Invalid Signature
+
+&#x20;      │
+
+&#x20;      ├── Expired
+
+&#x20;      │
+
+&#x20;      ├── Missing "sub"
+
+&#x20;      │
+
+&#x20;      ▼
+
+Extract Username
+
+&#x20;      │
+
+&#x20;      ▼
+
+Query Database
+
+&#x20;      │
+
+&#x20;      ▼
+
+Return Current User
+
+
+
+Only after the JWT is **successfully verified** do we touch the database.
+
+
+
+##### **Step 1 inside get\_current\_user()**
+
+
+
+We'll start with a try block because jwt.decode() can raise exceptions.
+
+
+
+*try:*
+
+&#x20;   *payload = jwt.decode(*
+
+&#x20;       *token,*
+
+&#x20;       *SECRET\_KEY,*
+
+&#x20;       *algorithms=\[ALGORITHM]*
+
+&#x20;   *)*
+
+
+
+What each parameter means
+
+
+
+**token**
+
+The JWT extracted by OAuth2PasswordBearer.
+
+
+
+**SECRET\_KEY**
+
+The same secret that was used when creating the token.
+
+
+
+**algorithms=\[ALGORITHM]**
+
+Tells python-jose which signing algorithm is expected (e.g. "HS256"). This prevents accepting tokens signed with unexpected algorithms.
+
+
+
+Many people think jwt.decode() simply converts a JWT into a dictionary. In reality, it does much more.
+
+
+
+python-jose performs several checks before returning the payload:
+
+✅ Verifies the **JWT signature** using the SECRET\_KEY.
+
+✅ Checks whether the **token has expired** (exp claim), if it's present.
+
+✅ Validates the **token structure** (header, payload, signature).
+
+✅ Ensures the token was **signed** using one of the allowed algorithms.
+
+
+
+If any of these checks fail, it raises a JWTError (or a related exception), which is why we wrap it in a try...except.
+
+
+
+##### **Step 2: Extract the username**
+
+Once jwt.decode() succeeds
+
+**we can retrieve the username:**
+
+*username = payload.get("sub")*
+
+
+
+Remember why?
+
+
+
+During login, we created the token like this:
+
+*create\_access\_token(*
+
+&#x20;   *data={"sub": db\_user.username}*
+
+*)*
+
+
+
+So after decoding:
+
+payload
+
+
+
+contains something like:
+
+*{*
+
+&#x20;   *"sub": "agney",*
+
+&#x20;   *"exp": 1785312345*
+
+*}*
+
+
+
+Therefore:
+
+*username = payload.get("sub")*
+
+
+
+returns:
+
+agney
+
+
+
+##### **Step 3: Validate the sub**
+
+We'll add:
+
+*username = payload.get("sub")*
+
+
+
+*if username is None:*
+
+&#x20;   *raise HTTPException(*
+
+&#x20;       *status\_code=status.HTTP\_401\_UNAUTHORIZED,*
+
+&#x20;       *detail="Could not validate credentials"*
+
+&#x20;   *)*
+
+
+
+Notice we're using:
+
+*payload.get("sub")*
+
+
+
+instead of:
+
+payload\["sub"]
+
+Why?
+
+
+
+Because:
+
+*payload\["sub"]*
+
+
+
+would raise a **KeyError** if "sub" doesn't exist.
+
+
+
+Whereas:
+
+payload.get("sub")
+
+
+
+returns:
+
+**None**
+
+
+
+which lets us **handle the error** cleanly.
+
+
+
+##### **Step 4: Handle Invalid Tokens**
+
+Since jwt.decode() can fail, complete the try...except:
+
+
+
+*try:*
+
+&#x20;   *payload = jwt.decode(*
+
+&#x20;       *token,*
+
+&#x20;       *SECRET\_KEY,*
+
+&#x20;       *algorithms=\[ALGORITHM]*
+
+&#x20;   *)*
+
+
+
+&#x20;   *username = payload.get("sub")*
+
+
+
+&#x20;   *if username is None:*
+
+&#x20;       *raise HTTPException(*
+
+&#x20;           *status\_code=status.HTTP\_401\_UNAUTHORIZED,*
+
+&#x20;           *detail="Could not validate credentials"*
+
+&#x20;       *)*
+
+
+
+*except JWTError:*
+
+&#x20;   *raise HTTPException(*
+
+&#x20;       *status\_code=status.HTTP\_401\_UNAUTHORIZED,*
+
+&#x20;       *detail="Could not validate credentials"*
+
+&#x20;   *)*
+
+
+
+Now we've handled:
+
+
+
+✅ Invalid signature
+
+✅ Expired token
+
+✅ Corrupted token
+
+✅ Missing sub
+
+
+
+**Why do we catch:**
+
+*except JWTError:*
+
+
+
+**Why?**
+
+When someone sends:
+
+an expired token,
+
+a modified token,
+
+or a completely fake token,
+
+
+
+that's **not a bug** in your application. It's an **authentication failure.**
+
+
+
+If you don't catch JWTError, FastAPI will return a 500 Internal Server Error, which is misleading because the server isn't broken.
+
+
+
+Instead, we catch it and return:
+
+**401 Unauthorized**
+
+
+
+This tells the client:
+
+"Your credentials are invalid. Please **authenticate again**."
+
+
+
+##### **Step 5: Query the Database**
+
+
+
+**Add:**
+
+*db\_user = db.query(Users).filter(*
+
+&#x20;   *Users.username == username*
+
+*).first()*
+
+
+
+*if db\_user is None:*
+
+&#x20;   *raise HTTPException(*
+
+&#x20;       *status\_code=status.HTTP\_401\_UNAUTHORIZED,*
+
+&#x20;       *detail="Could not validate credentials"*
+
+&#x20;   *)*
+
+
+
+*return db\_user*
+
+
+
+###### **Let's trace an actual request:**
+
+
+
+GET /me
+
+Authorization: Bearer eyJhbGc...
+
+↓
+
+OAuth2PasswordBearer
+
+↓
+
+Extracts:
+
+*eyJhbGc...*
+
+↓
+
+*jwt.decode()*
+
+↓
+
+*{*
+
+&#x20;   *"sub": "agney",*
+
+&#x20;   *"exp": 1785312345*
+
+*}*
+
+↓
+
+*username = "agney"*
+
+↓
+
+*db.query(Users)*
+
+↓
+
+Returns:
+
+*Users(*
+
+&#x20;   *id=1,*
+
+&#x20;   *username="agney",*
+
+&#x20;   *email="agney@gmail.com"*
+
+*)*
+
+↓
+
+Returned by:
+
+get\_current\_user()
 
 
 
