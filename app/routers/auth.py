@@ -10,6 +10,10 @@ from app.schemas.user import UserLogin
 from app.utils.jwt import create_access_token
 from app.utils.security import verify_password
 
+from app.dependencies.auth import get_current_user
+
+from fastapi.security import OAuth2PasswordRequestForm
+
 router=APIRouter(
     prefix="/auth",
     tags=["Authentication"]
@@ -48,8 +52,8 @@ def register(user: UserCreate,db: Session=Depends(get_db)):
     return db_user
 
 @router.post("/login")
-def login(user: UserLogin, db:Session=Depends(get_db)):
-    db_user=db.query(Users).filter(Users.username==user.username).first()
+def login(form_data:OAuth2PasswordRequestForm=Depends(), db:Session=Depends(get_db)):
+    db_user=db.query(Users).filter(Users.username==form_data.username).first()
     print("User found:", db_user.username if db_user else None)
     if not db_user:
         raise HTTPException(
@@ -57,7 +61,7 @@ def login(user: UserLogin, db:Session=Depends(get_db)):
             detail="Invalid username or password"
         )
 
-    if not verify_password(user.password,db_user.hashed_password):
+    if not verify_password(form_data.password,db_user.hashed_password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid username or password"
@@ -72,3 +76,7 @@ def login(user: UserLogin, db:Session=Depends(get_db)):
         "access_token":access_token,
         "token_type":"bearer"
     }
+
+@router.get("/me")
+def get_me(current_user:Users=Depends(get_current_user)):
+    return current_user

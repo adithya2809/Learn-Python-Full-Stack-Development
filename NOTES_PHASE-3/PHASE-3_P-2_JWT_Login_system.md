@@ -2237,3 +2237,381 @@ get\_current\_user()
 
 
 
+##### **Protecting Your First Endpoint**
+
+
+
+Until now, we've built get\_current\_user(). But nothing is using it yet.
+
+Let's create a protected endpoint.
+
+
+
+In your auth.py (or wherever your auth router is), add:
+
+
+
+*from app.dependencies.auth import get\_current\_user*
+
+*from app.models.user import Users*
+
+
+
+*Now create this endpoint:*
+
+
+
+*@router.get("/me")*
+
+*def get\_me(*
+
+&#x20;   *current\_user: Users = Depends(get\_current\_user)*
+
+*):*
+
+&#x20;   *return current\_user*
+
+
+
+**What actually happens?**
+
+
+
+Request:
+
+GET /auth/me
+
+
+
+No header:
+
+Authorization: Bearer ...
+
+
+
+Flow:
+
+Request
+
+&#x20;   │
+
+&#x20;   ▼
+
+Depends(get\_current\_user)
+
+&#x20;   │
+
+&#x20;   ▼
+
+Depends(oauth2\_scheme)
+
+&#x20;   │
+
+&#x20;   ▼
+
+Authorization Header?
+
+&#x20;      │
+
+&#x20;     No
+
+&#x20;      │
+
+&#x20;      ▼
+
+401 Unauthorized
+
+
+
+Notice something interesting:
+
+👉 get\_current\_user() is never even called.
+
+
+
+Why?
+
+Because before FastAPI calls your function, it first resolves all its dependencies.
+
+
+
+It tries to resolve:
+
+*token: str = Depends(oauth2\_scheme)*
+
+
+
+Since the Authorization header is missing, oauth2\_scheme raises a 401 Unauthorized immediately.
+
+
+
+So the request never reaches:
+
+
+
+jwt.decode(...)
+
+or
+
+db.query(...)
+
+
+
+Three scenarios
+
+
+
+1️⃣ No token
+
+Authorization Header
+
+&#x20;     │
+
+&#x20;     ✗ Missing
+
+&#x20;     │
+
+&#x20;     ▼
+
+401 Unauthorized
+
+
+
+2️⃣ Invalid token
+
+Authorization Header
+
+&#x20;     │
+
+&#x20;     ▼
+
+oauth2\_scheme
+
+&#x20;     │
+
+&#x20;     ▼
+
+jwt.decode()
+
+&#x20;     │
+
+&#x20;     ✗ JWTError
+
+&#x20;     │
+
+&#x20;     ▼
+
+401 Unauthorized
+
+
+
+3️⃣ Valid token
+
+Authorization Header
+
+&#x20;     │
+
+&#x20;     ▼
+
+oauth2\_scheme
+
+&#x20;     │
+
+&#x20;     ▼
+
+jwt.decode()
+
+&#x20;     │
+
+&#x20;     ▼
+
+Database
+
+&#x20;     │
+
+&#x20;     ▼
+
+Return User
+
+&#x20;     │
+
+&#x20;     ▼
+
+/me endpoint executes
+
+
+
+
+
+##### **Small improvement to your login endpoint**
+
+
+
+Since you're now using OAuth2PasswordRequestForm, you can simplify the endpoint slightly:
+
+
+
+*from fastapi.security import OAuth2PasswordRequestForm*
+
+
+
+*@router.post("/login")*
+
+*def login(*
+
+&#x20;   *form\_data: OAuth2PasswordRequestForm = Depends(),*
+
+&#x20;   *db: Session = Depends(get\_db)*
+
+*):*
+
+&#x20;   *db\_user = db.query(Users).filter(*
+
+&#x20;       *Users.username == form\_data.username*
+
+&#x20;   *).first()*
+
+
+
+&#x20;   *if not db\_user:*
+
+&#x20;       *raise HTTPException(*
+
+&#x20;           *status\_code=status.HTTP\_401\_UNAUTHORIZED,*
+
+&#x20;           *detail="Invalid username or password"*
+
+&#x20;       *)*
+
+
+
+&#x20;   *if not verify\_password(*
+
+&#x20;       *form\_data.password,*
+
+&#x20;       *db\_user.hashed\_password*
+
+&#x20;   *):*
+
+&#x20;       *raise HTTPException(*
+
+&#x20;           *status\_code=status.HTTP\_401\_UNAUTHORIZED,*
+
+&#x20;           *detail="Invalid username or password"*
+
+&#x20;       *)*
+
+
+
+&#x20;   *access\_token = create\_access\_token(*
+
+&#x20;       *data={"sub": db\_user.username}*
+
+&#x20;   *)*
+
+
+
+&#x20;   *return {*
+
+&#x20;       *"access\_token": access\_token,*
+
+&#x20;       *"token\_type": "bearer"*
+
+&#x20;   *}*
+
+
+
+The OAuth2 Password Grant specification sends credentials as application/x-www-form-urlencoded rather than JSON. FastAPI's OAuth2PasswordRequestForm is designed to parse those form fields and integrates directly with Swagger's OAuth2 'Authorize' flow. Using a Pydantic model expects a JSON request body, so it won't work with the built-in Swagger OAuth2 authentication dialog.
+
+
+
+#### **Congratulations!**
+
+
+
+This is a major milestone in your backend journey.
+
+You didn't just follow a tutorial—you understood why each component exists and built the authentication flow step by step.
+
+
+
+🏆 What you've built
+
+
+
+You now have a complete JWT authentication system.
+
+
+
+&#x20;               Register
+
+&#x20;                  │
+
+&#x20;                  ▼
+
+&#x20;        Hash Password (bcrypt)
+
+&#x20;                  │
+
+&#x20;                  ▼
+
+&#x20;            Store in PostgreSQL
+
+&#x20;                  │
+
+&#x20;                  ▼
+
+&#x20;               Login
+
+&#x20;                  │
+
+&#x20;                  ▼
+
+&#x20;         Verify Password
+
+&#x20;                  │
+
+&#x20;                  ▼
+
+&#x20;            Generate JWT
+
+&#x20;                  │
+
+&#x20;                  ▼
+
+&#x20;     Authorization: Bearer <token>
+
+&#x20;                  │
+
+&#x20;                  ▼
+
+&#x20;      OAuth2PasswordBearer
+
+&#x20;                  │
+
+&#x20;                  ▼
+
+&#x20;           get\_current\_user()
+
+&#x20;                  │
+
+&#x20;                  ▼
+
+&#x20;           Decode JWT
+
+&#x20;                  │
+
+&#x20;                  ▼
+
+&#x20;      Query Database
+
+&#x20;                  │
+
+&#x20;                  ▼
+
+&#x20;       Protected Endpoint (/me)
+
+
+
+This is essentially the same authentication architecture used in many production FastAPI applications.
+
