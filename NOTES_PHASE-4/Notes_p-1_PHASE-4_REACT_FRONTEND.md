@@ -1043,57 +1043,53 @@ Browser opens localhost:5173
 
 &#x20;     index.html
 
-&#x20;         │
+&#x20;        │
 
-&#x20;         ▼
+&#x20;        ▼
 
-<script src="/src/main.jsx">
+&#x20;        │
 
-&#x20;         │
+&#x20;       ▼
 
-&#x20;         ▼
+&#x20;    main.jsx
 
-&#x20;      main.jsx
+&#x20;        │
 
-&#x20;         │
+&#x20;        ▼
 
-&#x20;         ▼
+Imports App.jsx
 
-&#x20;Imports App.jsx
+&#x20;        │
 
-&#x20;         │
+&#x20;        ▼
 
-&#x20;         ▼
+&#x20;  Renders 
 
-&#x20;Renders <App />
+&#x20;        │
 
-&#x20;         │
+&#x20;        ▼
 
-&#x20;         ▼
+Places it inside
 
-&#x20;Places it inside
+&#x20;        │
 
-<div id="root"></div>
+&#x20;        ▼
 
-&#x20;         │
-
-&#x20;         ▼
-
-&#x20;Browser shows UI
+Browser shows UI
 
 
 
-Everything begins here.
+**Everything begins here.**
 
 
 
-##### **Line 1**
+###### **Line 1**
 
 *import { StrictMode } from 'react'*
 
 
 
-What is import?
+**What is import?**
 
 You've already seen this in Python.
 
@@ -1109,25 +1105,19 @@ Python:
 
 *import { StrictMode } from 'react'*
 
-
-
 Same concept.
 
 You're importing something from another module.
 
 
 
-###### **What is StrictMode?**
-
-
+**What is StrictMode?**
 
 This confuses almost every beginner.
 
 StrictMode does NOT affect your users.
 
-
-
-It is only **active during development.**
+It is only active during development.
 
 
 
@@ -1141,8 +1131,6 @@ accidental side effects
 
 potential bugs
 
-
-
 Think of it as a teacher watching your code.
 
 
@@ -1155,7 +1143,7 @@ StrictMode
 
 ↓
 
-"Hey...
+"Hey…
 
 This could become a bug later."
 
@@ -1169,21 +1157,15 @@ npm run build
 
 StrictMode disappears
 
-
-
 It does not make your application slower for users.
 
 
 
-##### **Line 2**
+###### **Line 2**
 
 *import { createRoot } from 'react-dom/client'*
 
-
-
-This is probably the **most important** import.
-
-
+This is probably the most important import.
 
 Notice something interesting.
 
@@ -1195,21 +1177,19 @@ react
 
 Earlier.
 
-
-
 Now we're importing from:
 
-*react-dom/client*
+react-dom/client
 
 
 
-Why two different packages?
+**Why two different packages?**
 
 Because they do different jobs.
 
 
 
-###### **React**
+**React**
 
 React understands:
 
@@ -1221,17 +1201,13 @@ State
 
 Hooks
 
-
-
-It knows what the UI should be.
+It knows **what** the UI should be.
 
 
 
-###### **ReactDOM**
+**ReactDOM**
 
-ReactDOM knows **how to display** that UI inside a web browser.
-
-
+ReactDOM knows **how** to display that UI inside a web browser.
 
 Think of it like this:
 
@@ -1249,15 +1225,9 @@ ReactDOM
 
 Displays it in Browser
 
-
-
-###### **What is createRoot()?**
-
-
+What is createRoot()?
 
 Imagine your HTML:
-
-*<div id="root"></div>*
 
 
 
@@ -1265,77 +1235,51 @@ React asks:
 
 "Where should I place my application?"
 
-
-
 The answer:
 
-*document.getElementById("root")*
-
-
+document.getElementById("root")
 
 That gives React this element:
-
-*<div id="root"></div>*
 
 
 
 Then:
 
-createRoot(...)
+createRoot(…)
 
-
-
-creates a **React root** inside it.
-
-
+creates a React root inside it.
 
 Think of it as:
-
-
 
 Empty Container
 
 ↓
 
-React takes **ownership**
+React takes ownership
 
 ↓
 
-Everything will be **rendered** here
+Everything will be rendered here
 
+Line 3
 
-
-##### **Line 3**
-
-*import './index.css'*
-
-
+import './index.css'
 
 Simple.
 
 It imports the global stylesheet.
 
-
-
 Exactly like:
-
-*<link rel="stylesheet" href="style.css">*
 
 
 
 in HTML.
 
+Line 4
 
-
-##### **Line 4**
-
-*import App from './App.jsx'*
-
-
+import App from './App.jsx'
 
 This imports your main component.
-
-
 
 Think:
 
@@ -1344,8 +1288,6 @@ App.jsx
 ↓
 
 Main Page of your application
-
-
 
 Later we'll have:
 
@@ -1357,51 +1299,33 @@ Navbar.jsx
 
 Footer.jsx
 
-
-
 But everything begins with:
 
 App.jsx
 
+Now the Most Important Line
 
-
-##### **Now the Most Important Line**
-
-*createRoot(document.getElementById('root')).render(*
-
-
+createRoot(document.getElementById('root')).render(
 
 Let's break it apart.
 
+Part 1
 
-
-###### **Part 1**
-
-*document.getElementById("root")*
-
-
+document.getElementById("root")
 
 Does this look familiar?
 
-
-
 You've probably used it in JavaScript before.
-
-
 
 It searches:
 
-*<div id="root"></div>*
+
 
 and returns it.
 
+Part 2
 
-
-###### **Part 2**
-
-*createRoot(...)*
-
-
+createRoot(…)
 
 Now React says:
 
@@ -1409,45 +1333,29 @@ Now React says:
 
 I know where to render."
 
+Part 3
 
-
-###### **Part 3**
-
-*.render(...)*
-
-
+.render(…)
 
 Now React says:
 
 "Render this component inside that root."
 
-
-
-
-
-###### **What is Render?**
+What is Render?
 
 Render means:
 
-**Convert** React components into **actual DOM elements** and **display** them.
-
-
+Convert React components into actual DOM elements and display them.
 
 So this:
 
-<App />
-
-becomes **real HTML** on your **webpage.**
 
 
+becomes real HTML on your webpage.
 
-
-
-###### **Why <App />?**
+Why ?
 
 Notice:
-
-<App />
 
 
 
@@ -1455,45 +1363,29 @@ instead of
 
 App()
 
+Why?
 
-
-**Why?**
-
-Because React components are represented using **JSX syntax.**
-
-
+Because React components are represented using JSX syntax.
 
 Behind the scenes:
-
-<App />
 
 
 
 is conceptually similar to:
 
-*React.createElement(App)*
-
-
+React.createElement(App)
 
 React then calls your component function when it needs to produce the UI.
 
+Finally
 
 
 
 
-##### **Finally**
-
-*<StrictMode>*
-
-*<App />*
-
-*</StrictMode>*
 
 
 
 means
-
-
 
 Run App
 
@@ -1509,19 +1401,15 @@ Show Warnings
 
 Help Developer
 
-
-
 Nothing more.
 
-
-
-##### **Entire Flow**
+Entire Flow
 
 index.html
 
 ↓
 
-<div id="root"></div>
+
 
 ↓
 
@@ -1546,4 +1434,1155 @@ Render App
 ↓
 
 Browser Displays UI
+
+
+
+#### **Lesson 7 — What is a React Component?**
+
+Before looking at the code, answer this:
+
+If I ask you,
+
+
+
+"What is a component?"
+
+What would you say?
+
+
+
+Most beginners answer:
+
+"A reusable piece of UI."
+
+
+
+That's correct...
+
+But why?
+
+
+
+Let's find out.
+
+
+
+**Look at this**
+
+*function App() {*
+
+
+
+&#x20;   *return (*
+
+&#x20;       *...*
+
+&#x20;   *)*
+
+*}*
+
+
+
+Ignore everything else.
+
+This is all I want you to see.
+
+
+
+###### **Is App a normal JavaScript function?**
+
+*function add(a, b) {*
+
+&#x20;   *return a + b;*
+
+*}*
+
+*add(a,b);*
+
+returns
+
+15
+
+
+
+**Now compare it with:**
+
+*function App() {*
+
+&#x20;   *return (*
+
+&#x20;       *<h1>Hello React</h1>*
+
+&#x20;   *)*
+
+*}*
+
+
+
+It is also...
+
+
+
+Just a JavaScript function.
+
+The only difference is what it **returns.**
+
+
+
+**Normal Function**
+
+*function greet() {*
+
+&#x20;   *return "Hello";*
+
+*}*
+
+
+
+Returns:
+
+String
+
+
+
+Another example:
+
+*function add() {*
+
+&#x20;   *return 10;*
+
+*}*
+
+
+
+Returns:
+
+Number
+
+
+
+###### **React Component**
+
+*function App() {*
+
+&#x20;   *return <h1>Hello</h1>;*
+
+*}*
+
+
+
+Returns:
+
+**React Element** (JavaScript Object)
+
+
+
+Remember what we learned before?
+
+JSX
+
+↓
+
+React.createElement()
+
+↓
+
+JavaScript Object
+
+
+
+So technically,
+
+App() returns a **JavaScript object** representing the **UI.**
+
+
+
+
+
+###### **Why is it called a Component?**
+
+
+
+Suppose you're building Amazon.
+
+
+
+Instead of writing one gigantic file:
+
+Amazon
+
+Navbar
+
+Products
+
+Footer
+
+Cart
+
+Profile
+
+Orders
+
+Search
+
+Wishlist
+
+Payments
+
+
+
+**React says:**
+
+Break it into pieces.
+
+
+
+Example:
+
+App
+
+│
+
+├── Navbar
+
+├── Hero
+
+├── Products
+
+├── Footer
+
+Each piece is a Component.
+
+
+
+###### **Why does the function start with a Capital Letter?**
+
+
+
+Notice:
+
+function App()
+
+instead of
+
+function app()
+
+React uses a simple rule.
+
+
+
+**Lowercase:**
+
+<div>
+
+<h1>
+
+<button>
+
+means
+
+**HTML Elements**
+
+
+
+**Uppercase:**
+
+<App />
+
+<Navbar />
+
+<Login />
+
+<ProductCard />
+
+means
+
+**React Components**
+
+
+
+If you write:
+
+<app />
+
+
+
+React thinks:
+
+"Oh...
+
+that's an HTML tag."
+
+It won't call your function.
+
+
+
+###### **Let's Simplify Your App.jsx**
+
+Delete everything inside App.jsx and replace it with:
+
+
+
+*function App() {*
+
+&#x20; *return (*
+
+&#x20;   *<h1>Hello React</h1>*
+
+&#x20; *)*
+
+*}*
+
+*export default App*
+
+
+
+Run the application.
+
+
+
+You should see:
+
+**Hello React**
+
+
+
+That's it.
+
+No logos.
+
+No buttons.
+
+No CSS.
+
+No Vite template.
+
+Just your first React component.
+
+
+
+#### **Lesson 8 — Why Can a React Component Return Only One Parent Element?**
+
+
+
+This is one of the first errors every React developer sees.
+
+
+
+Suppose you write:
+
+
+
+*function App() {*
+
+&#x20; *return (*
+
+&#x20;   *<h1>Hello</h1>*
+
+&#x20;   *<p>Welcome</p>*
+
+&#x20; *)*
+
+*}*
+
+*export default App*
+
+
+
+Do you think this is valid?
+
+❌ No.
+
+
+
+React will throw an error similar to:
+
+***Adjacent JSX elements must be wrapped in an enclosing tag.***
+
+
+
+
+
+###### **Why Does This Happen?**
+
+Remember what we learned yesterday.
+
+A React component is just a JavaScript function.
+
+A JavaScript function can return only one value.
+
+
+
+Example:
+
+*function add() {*
+
+&#x20;   *return 5;*
+
+*}*
+
+Valid ✅
+
+
+
+**But this isn't valid:**
+
+*function add() {*
+
+&#x20;   *return 5;*
+
+&#x20;   *return 10;*
+
+*}*
+
+
+
+A function **cannot return two separate values.**
+
+The same applies to React.
+
+
+
+**This is invalid:**
+
+*function App() {*
+
+&#x20;   *return (*
+
+&#x20;       *<h1>Hello</h1>*
+
+&#x20;       *<p>Welcome</p>*
+
+&#x20;   *)*
+
+*}*
+
+
+
+because React sees two sibling elements being returned.
+
+
+
+##### **Solution 1 — Wrap with a <div>**
+
+*function App() {*
+
+&#x20;   *return (*
+
+&#x20;       *<div>*
+
+&#x20;           *<h1>Hello</h1>*
+
+&#x20;           *<p>Welcome</p>*
+
+&#x20;       *</div>*
+
+&#x20;   *)*
+
+*}*
+
+
+
+Now React sees:
+
+One Parent
+
+&#x20;    │
+
+&#x20;    ▼
+
+<div>
+
+&#x20;   <h1>
+
+&#x20;   <p>
+
+</div>
+
+
+
+The function returns **one root element** (<div>), which contains **two children.**
+
+
+
+###### **But There's a Problem**
+
+Suppose your HTML becomes:
+
+*<div>*
+
+&#x20;   *<Navbar />*
+
+&#x20;   *<Hero />*
+
+&#x20;   *<Footer />*
+
+*</div>*
+
+
+
+React renders:
+
+*<div>*
+
+&#x20;   *<nav>...</nav>*
+
+&#x20;   *<section>...</section>*
+
+&#x20;   *<footer>...</footer>*
+
+*</div>*
+
+
+
+What if you didn't actually want that extra <div>?
+
+
+
+Extra wrapper elements can:
+
+Make the DOM unnecessarily deep.
+
+Affect CSS layouts (especially Flexbox and Grid).
+
+Add elements that serve no purpose.
+
+
+
+
+
+##### **React's Solution — Fragments**
+
+Instead of:
+
+*<div>*
+
+&#x20;   *<h1>Hello</h1>*
+
+&#x20;   *<p>Welcome</p>*
+
+*</div>*
+
+
+
+React lets you write:
+
+*<>*
+
+&#x20;   *<h1>Hello</h1>*
+
+&#x20;   *<p>Welcome</p>*
+
+*</>*
+
+
+
+This is called a **Fragment.**
+
+A Fragment **groups multiple elements** together **without** creating an **extra HTML element.**
+
+
+
+###### **Fragment Syntax**
+
+**Short Syntax**
+
+*<>*
+
+&#x20;   *<h1>Hello</h1>*
+
+&#x20;   *<p>Welcome</p>*
+
+*</>*
+
+
+
+This is what you'll use 90% of the time.
+
+
+
+**Long Syntax**
+
+*import { Fragment } from "react";*
+
+
+
+*function App() {*
+
+&#x20;   *return (*
+
+&#x20;       *<Fragment>*
+
+&#x20;           *<h1>Hello</h1>*
+
+&#x20;           *<p>Welcome</p>*
+
+&#x20;       *</Fragment>*
+
+&#x20;   *);*
+
+*}*
+
+
+
+Same result.
+
+The short syntax is just shorthand.
+
+
+
+##### **Visual Understanding**
+
+
+
+Without Fragment:
+
+App
+
+↓
+
+div
+
+├── h1
+
+└── p
+
+
+
+**With Fragment:**
+
+App
+
+├── h1
+
+└── p
+
+**Cleaner DOM.**
+
+
+
+
+
+#### **Lesson 9 — JavaScript Inside JSX (One of the Most Important Concepts)**
+
+
+
+Now React starts becoming dynamic.
+
+
+
+Suppose you write:
+
+*function App() {*
+
+&#x20;   *const name = "Agney";*
+
+
+
+&#x20;   *return (*
+
+&#x20;       *<h1>Hello name</h1>*
+
+&#x20;   *);*
+
+*}*
+
+
+
+What will the browser display?
+
+Hello name
+
+
+
+because "name" is just text.
+
+
+
+###### **How do we display the value of the variable?**
+
+React gives us a special syntax:
+
+
+
+*function App() {*
+
+&#x20;   *const name = "Agney";*
+
+
+
+&#x20;   *return (*
+
+&#x20;       *<h1>Hello {name}</h1>*
+
+&#x20;   *);*
+
+*}*
+
+
+
+Output:
+
+Hello Agney
+
+
+
+Notice the curly braces:
+
+***{name}***
+
+
+
+These tell JSX:
+
+"Stop treating this as HTML-like markup. Evaluate this as JavaScript."
+
+
+
+###### **Think of JSX as Two Worlds**
+
+JSX (HTML-like)
+
+↓
+
+<h1>Hello</h1>
+
+
+
+Static content.
+
+
+
+Inside curly braces:
+
+{name}
+
+**React switches to JavaScript.**
+
+
+
+Example:
+
+*function App() {*
+
+&#x20;   *const age = 22;*
+
+&#x20;   *return (*
+
+&#x20;       *<h1>Age: {age}</h1>*
+
+&#x20;   *);*
+
+*}*
+
+
+
+Output:
+
+Age: 22
+
+
+
+You can even do calculations:
+
+*function App() {*
+
+&#x20;   *return (*
+
+&#x20;       *<h1>{10 + 20}</h1>*
+
+&#x20;   *);*
+
+*}*
+
+
+
+Output:
+
+30
+
+
+
+Or expressions:
+
+*const firstName = "Agney";*
+
+*const lastName = "Aditya";*
+
+
+
+*<h1>{firstName + " " + lastName}</h1>*
+
+
+
+Output:
+
+Agney Aditya
+
+
+
+**Function Calls** 
+
+*function greet() {*
+
+&#x20;   *return "Good Evening";*
+
+*}*
+
+
+
+*<h1>{greet()}</h1>*
+
+
+
+Output:
+
+Good Evening
+
+
+
+Notice we're calling a **JavaScript function** inside **JSX.**
+
+
+
+**Ternary Operator**
+
+*const isLoggedIn = true;*
+
+
+
+*<h1>{isLoggedIn ? "Welcome" : "Please Login"}</h1>*
+
+
+
+Output:
+
+Welcome
+
+
+
+We'll use this extensively when we build the login page.
+
+
+
+##### **Expression vs Statement (This is Very Important)**
+
+Expression ✅	Statement ❌	
+
+|**Expression**|**Statement**|
+|-|-|
+|10 + 20|if (...) {}|
+|name.toUpperCase()|for (...) {}|
+|add(5, 10)|while (...) {}|
+|age >= 18 ? "Adult" : "Minor"|switch (...) {}|
+
+
+
+Expressions **produce a value**. Statements **perform an action.**
+
+Since JSX needs something it can **display**, it only **accepts expressions** inside **{}.**
+
+
+
+
+
+###### **Imagine you have this component:**
+
+*function Welcome() {*
+
+&#x20;   *return <h1>Welcome!</h1>;*
+
+*}*
+
+
+
+If you want it to display:
+
+Welcome Agney
+
+
+
+and later:
+
+Welcome Rahul
+
+
+
+without creating two separate components...
+
+
+
+
+
+**Think about normal JavaScript functions**
+
+Suppose you have:
+
+
+
+*function greet(name) {*
+
+&#x20;   *return "Welcome " + name;*
+
+*}*
+
+
+
+Now you can call it like this:
+
+*greet("Agney");*
+
+Output:
+
+Welcome Agney
+
+
+
+or
+
+
+
+*greet("Rahul");*
+
+Output:
+
+Welcome Rahul
+
+
+
+Notice something?
+
+The function doesn't create the variable.
+
+The **caller passes** it in.
+
+
+
+
+
+**React works the same way**
+
+A React component is just a function.
+
+
+
+So instead of this:
+
+*function Welcome() {*
+
+&#x20;   *return <h1>Welcome {name}</h1>;*
+
+*}*
+
+
+
+React allows us to do something conceptually similar to:
+
+*function Welcome(name) {*
+
+&#x20;   *return <h1>Welcome {name}</h1>;*
+
+*}*
+
+
+
+Now React can pass different values into the component.
+
+But instead of passing a single parameter like JavaScript functions, React **passes an object**.
+
+
+
+That object is called **props.**
+
+
+
+So the real version looks like:
+
+*function Welcome(props) {*
+
+&#x20;   *return <h1>Welcome {props.name}</h1>;*
+
+*}*
+
+
+
+Then we use it like this:
+
+<Welcome name="Agney" />
+
+<Welcome name="Rahul" />
+
+<Welcome name="Priya" />
+
+
+
+**React automatically creates:**
+
+*{*
+
+&#x20;   *name: "Agney"*
+
+*}*
+
+and passes it into the component.
+
+
+
+
+
+###### **Visual Flow**
+
+<App />
+
+&#x20;       │
+
+&#x20;       ▼
+
+<Welcome name="Agney" />
+
+&#x20;       │
+
+React creates
+
+&#x20;       │
+
+&#x20;       ▼
+
+props = {
+
+&#x20;   name: "Agney"
+
+}
+
+&#x20;       │
+
+&#x20;       ▼
+
+Welcome(props)
+
+&#x20;       │
+
+&#x20;       ▼
+
+<h1>Welcome Agney</h1>
+
+
+
+This should remind you of something...
+
+Look familiar?
+
+
+
+Python:
+
+*def greet(name):*
+
+&#x20;   *return f"Welcome {name}"*
+
+
+
+JavaScript:
+
+*function greet(name) {*
+
+&#x20;   *return `Welcome ${name}`;*
+
+*}*
+
+
+
+**React:**
+
+*function Welcome(props) {*
+
+&#x20;   *return <h1>Welcome {props.name}</h1>;*
+
+*}*
+
+
+
+They're all following the same idea:
+
+Functions receive inputs and produce outputs.
+
+
+
+The difference is that React **bundles the inputs** into a **single object** called **props.**
+
+
+
+
+
+###### **Why does React pass an object (props) instead of a single variable?**
+
+
+
+The main reason is **flexibility.**
+
+
+
+Imagine React only allowed this:
+
+*function Welcome(name) {*
+
+&#x20;   *...*
+
+*}*
+
+
+
+Now suppose later you also need:
+
+name
+
+age
+
+course
+
+city
+
+email
+
+
+
+Would React have to call:
+
+*Welcome("Agney", 22, "React", "Hyderabad", "agney@email.com")*
+
+
+
+That becomes difficult to read and maintain.
+
+
+
+Instead, React **bundles everything** into one object:
+
+*props = {*
+
+&#x20;   *name: "Agney",*
+
+&#x20;   *age: 22,*
+
+&#x20;   *course: "React",*
+
+&#x20;   *city: "Hyderabad",*
+
+&#x20;   *email: "agney@email.com"*
+
+*}*
+
+
+
+Now your component receives one parameter, but that parameter **contains many pieces of data.**
+
+
+
+Interview-quality answer
+
+React passes a **single props object** because it allows multiple values to be grouped together in one parameter. This makes components **flexible, scalable**, and **easier to maintain** as more data needs to be passed.
+
+
+
+
 
