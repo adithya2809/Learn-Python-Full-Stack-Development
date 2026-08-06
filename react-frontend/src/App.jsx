@@ -1,7 +1,12 @@
 
 
-function Welcome(props){
-  return <h1>Welcome {props.name}</h1>
+function Student({name, age,course}){
+  return(<> <h1>{name}</h1>
+        <h2>{age}</h2>
+        <p>{course}</p>
+  </>
+
+  )
   
 }
 
@@ -9,9 +14,16 @@ function Welcome(props){
 function App(){
   return(
     <>
-    <Welcome name="Adithya"/>
-    <Welcome name="Paul"/>
-    <Welcome name="Caraxes"/>
+    <Student name="Adithya"
+             age={25}
+             course="React"/>
+    <Student name="Paul"
+             age={35}
+             course="Duke"/>
+    <Student name="Caraxes"
+             age={75}
+             course="Obey"/>
+    
     </>
   );
 

@@ -1063,7 +1063,7 @@ Imports App.jsx
 
 &#x20;        ▼
 
-&#x20;  Renders 
+&#x20;  Renders
 
 &#x20;        │
 
@@ -2221,7 +2221,7 @@ Agney Aditya
 
 
 
-**Function Calls** 
+**Function Calls**
 
 *function greet() {*
 
@@ -2267,7 +2267,7 @@ We'll use this extensively when we build the login page.
 
 ##### **Expression vs Statement (This is Very Important)**
 
-Expression ✅	Statement ❌	
+Expression ✅	Statement ❌
 
 |**Expression**|**Statement**|
 |-|-|
@@ -2585,4 +2585,602 @@ React passes a **single props object** because it allows multiple values to be g
 
 
 
+
+#### **Lesson 10 — Your First Reusable Component**
+
+**Replace your App.jsx with this:**
+
+*function Welcome(props) {*
+
+&#x20; *return <h1>Welcome {props.name}</h1>;*
+
+*}*
+
+
+
+*function App() {*
+
+&#x20; *return (*
+
+&#x20;   *<>*
+
+&#x20;     *<Welcome name="Agney" />*
+
+&#x20;     *<Welcome name="Rahul" />*
+
+&#x20;     *<Welcome name="Priya" />*
+
+&#x20;   *</>*
+
+&#x20; *);*
+
+*}*
+
+
+
+*export default App;*
+
+
+
+Run it.
+
+
+
+You should see:
+
+Welcome Agney
+
+Welcome Rahul
+
+Welcome Priya
+
+
+
+What Actually Happened?
+
+Let's slow it down.
+
+
+
+React first renders:
+
+<App />
+
+
+
+Remember:
+
+<App />
+
+↓
+
+Call App()
+
+↓
+
+Return JSX
+
+
+
+Now App() returns:
+
+*<>*
+
+&#x20;   *<Welcome name="Agney" />*
+
+&#x20;   *<Welcome name="Rahul" />*
+
+&#x20;   *<Welcome name="Priya" />*
+
+*</>*
+
+
+
+React now sees three more components.
+
+
+
+###### **First Component**
+
+
+
+React sees:
+
+*<Welcome name="Agney" />*
+
+
+
+Conceptually, it does something like:
+
+*Welcome({*
+
+&#x20;   *name: "Agney"*
+
+*});*
+
+
+
+Now inside the function:
+
+*function Welcome(props) {*
+
+&#x20;   *return <h1>Welcome {props.name}</h1>;*
+
+*}*
+
+
+
+**becomes**
+
+
+
+*function Welcome(props) {*
+
+
+
+&#x20;   *props = {*
+
+&#x20;       *name: "Agney"*
+
+&#x20;   *}*
+
+
+
+&#x20;   *return <h1>Welcome Agney</h1>;*
+
+*}*
+
+
+
+
+
+##### **Visual Flow**
+
+<App />
+
+&#x20;       │
+
+&#x20;       ▼
+
+Calls App()
+
+&#x20;       │
+
+&#x20;       ▼
+
+Returns
+
+
+
+<Welcome />
+
+<Welcome />
+
+<Welcome />
+
+&#x20;       │
+
+&#x20;       ▼
+
+React calls Welcome()
+
+
+
+3 Times
+
+&#x20;       │
+
+&#x20;       ▼
+
+Different props each time
+
+&#x20;       │
+
+&#x20;       ▼
+
+Different Output
+
+
+
+This is why React components are **reusable.**
+
+
+
+
+
+##### **Props Destructuring**
+
+Right now we write:
+
+*function Welcome(props) {*
+
+&#x20;   *return <h1>Welcome {props.name}</h1>;*
+
+*}*
+
+
+
+This works.
+
+
+
+But React developers usually write:
+
+*function Welcome({ name }) {*
+
+&#x20;   *return <h1>Welcome {name}</h1>;*
+
+*}*
+
+
+
+This is a JavaScript feature.
+
+
+
+Instead of:
+
+*const name = props.name;*
+
+
+
+JavaScript lets us write:
+
+*const { name } = props;*
+
+
+
+React simply combines that into the function parameter:
+
+
+
+*function Welcome({ name }) {*
+
+&#x20;   *return <h1>Welcome {name}</h1>;*
+
+*}*
+
+
+
+Nothing React-specific happened here.
+
+It's just JavaScript **destructuring**.
+
+
+
+
+
+##### **Predict exactly what will happen.**
+
+When you click the button three times:
+
+
+
+What will be printed in the console?
+
+What will the browser display?
+
+
+
+###### **The code**
+
+*function App() {*
+
+
+
+&#x20;   *let count = 0;*
+
+
+
+&#x20;   *function increase() {*
+
+&#x20;       *count++;*
+
+&#x20;       *console.log(count);*
+
+&#x20;   *}*
+
+
+
+&#x20;   *return (*
+
+&#x20;       *<>*
+
+&#x20;           *<h1>{count}</h1>*
+
+
+
+&#x20;           *<button onClick={increase}>*
+
+&#x20;               *Increase*
+
+&#x20;           *</button>*
+
+&#x20;       *</>*
+
+&#x20;   *);*
+
+*}*
+
+
+
+What happens when the page first loads?
+
+
+
+React executes:
+
+*App();*
+
+
+
+At this moment:
+
+*let count = 0;*
+
+
+
+React renders:
+
+Count: 0
+
+
+
+So the browser shows:
+
+0
+
+
+
+**First Click**
+
+The button calls:
+
+*increase();*
+
+
+
+Inside:
+
+*count++;*
+
+
+
+Now:
+
+count = 1
+
+
+
+Console prints:
+
+1
+
+
+
+✅ Correct.
+
+
+
+But why doesn't the browser show 1?
+
+
+
+Ask yourself:
+
+
+
+###### **Who told React to execute App() again?**
+
+
+
+Nobody.
+
+React **rendered** the component once.
+
+Changing this variable:
+
+*count++;*
+
+
+
+does not tell React:
+
+"Hey, my UI has changed. Please render me again."
+
+
+
+So React **never re-runs:**
+
+App();
+
+
+
+Therefore the browser still displays:
+
+0
+
+
+
+**Second Click**
+
+Again:
+
+*count++;*
+
+
+
+Console:
+
+2
+
+
+
+Browser:
+
+0
+
+
+
+**Third Click**
+
+Console:
+
+3
+
+
+
+Browser:
+
+0
+
+
+
+**Final Result**
+
+Click	Console	Browser
+
+Initial	—	0
+
+Click 1	1	0
+
+Click 2	2	0
+
+Click 3	3	0
+
+
+
+##### **Why?**
+
+Because React only **updates** the UI when it **re-renders** the component.
+
+Normal JavaScript variables don't trigger a re-render.
+
+
+
+#### **This is exactly why useState() exists.**
+
+Instead of:
+
+*let count = 0;*
+
+
+
+React gives us:
+
+*const \[count, setCount] = useState(0);*
+
+
+
+Now, instead of:
+
+count++;
+
+
+
+we do:
+
+*setCount(count + 1);*
+
+
+
+When React sees:
+
+*setCount(...)*
+
+
+
+it says:
+
+**State changed!**
+
+↓
+
+Run App() again
+
+↓
+
+Update Virtual DOM
+
+↓
+
+Compare with previous Virtual DOM
+
+↓
+
+Update Real DOM
+
+↓
+
+Browser now shows new value
+
+
+
+Notice how this connects to everything you've already learned:
+
+
+
+useState()
+
+↓
+
+State Changes
+
+↓
+
+React Re-renders
+
+↓
+
+New Virtual DOM
+
+↓
+
+Reconciliation
+
+↓
+
+Real DOM Update
+
+
+
+Everything we've studied since the beginning now fits together.
+
+
+
+##### **React State**
+
+*const \[count, setCount] = useState(0);*
+
+
+
+*setCount(count + 1);*
+
+
+
+State Changed
+
+↓
+
+React Knows
+
+↓
+
+Component Re-renders
+
+↓
+
+Virtual DOM
+
+↓
+
+Reconciliation
+
+↓
+
+Real DOM Updates
+
+↓
+
+UI Changes
 
