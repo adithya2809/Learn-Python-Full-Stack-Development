@@ -1,29 +1,21 @@
+import { useState} from "react";
 
 
-function Student({name, age,course}){
-  return(<> <h1>{name}</h1>
-        <h2>{age}</h2>
-        <p>{course}</p>
-  </>
-
-  )
-  
-}
 
 
 function App(){
+  const[count,setCount]=useState(0);
+
   return(
     <>
-    <Student name="Adithya"
-             age={25}
-             course="React"/>
-    <Student name="Paul"
-             age={35}
-             course="Duke"/>
-    <Student name="Caraxes"
-             age={75}
-             course="Obey"/>
-    
+    <h1>Count:{count}</h1>
+
+    <button onClick={() => {console.log("before:",count);
+    setCount(count+1);
+    console.log("after:",count);
+    }}>
+      Increase
+    </button>
     </>
   );
 
