@@ -10,12 +10,29 @@ function App(){
     <>
     <h1>Count:{count}</h1>
 
-    <button onClick={() => {console.log("before:",count);
+    <button onClick={() => {
     setCount(count+1);
-    console.log("after:",count);
     }}>
       Increase
     </button>
+    <button onClick={() => {
+      setCount(count>0?count-1:0);
+    }}>
+      Decrease
+    </button>
+
+    <button onClick={()=>{
+      setCount(0)
+    }}>
+      Reset
+    </button>
+    <button onClick={()=>{
+      setCount(count>0?count*2:count+1);
+    }}>
+      Increase by 2
+    </button>
+    <p>{count===0? "count is at zero":"You're counting"}</p>
+    <p>{count>=10?"You've reached 10":"Keep going!"}</p>
     </>
   );
 
