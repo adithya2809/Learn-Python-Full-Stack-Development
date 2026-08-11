@@ -1440,6 +1440,476 @@ Dashboard
 
 
 
+##### **Lesson 15 — Objects in React State**
+
+So far, we've used separate state variables:
+
+*const \[username, setUsername] = useState("");*
+
+*const \[email, setEmail] = useState("");*
+
+*const \[password, setPassword] = useState("");*
+
+
+
+Now let's combine them into one object.
+
+*const \[formData, setFormData] = useState({*
+
+&#x20; *username: "",*
+
+&#x20; *email: "",*
+
+&#x20; *password: ""*
+
+*});*
+
+
+
+The state looks like:
+
+formData
+
+│
+
+├── username: ""
+
+├── email: ""
+
+└── password: ""
+
+
+
+This is useful for forms with many fields.
+
+
+
+###### **The Problem**
+
+Suppose the user types:
+
+Agney
+
+
+
+We might think:
+
+*formData.username = "Agney";*
+
+
+
+But ❌ don't do this in React.
+
+
+
+**Why?**
+
+Because you're directly modifying the existing state object.
+
+
+
+React expects us to use the setter:
+
+***setFormData(...)***
+
+
+
+to tell it that state has changed.
+
+
+
+##### **The Solution — Spread Operator**
+
+
+
+Remember JavaScript's spread operator?
+
+*const user = {*
+
+&#x20; *name: "Agney",*
+
+&#x20; *age: 22*
+
+*};*
+
+
+
+*const updatedUser = {*
+
+&#x20; *...user,*
+
+&#x20; *age: 23*
+
+*};*
+
+
+
+The ...user copies the existing properties:
+
+{
+
+&#x20; name: "Agney",
+
+&#x20; age: 22
+
+}
+
+
+
+Then:
+
+age: 23
+
+
+
+overwrites the old age.
+
+
+
+Result:
+
+{
+
+&#x20; name: "Agney",
+
+&#x20; age: 23
+
+}
+
+
+
+##### **Apply This to React**
+
+Our state:
+
+
+
+*const \[formData, setFormData] = useState({*
+
+&#x20; *username: "",*
+
+&#x20; *email: "",*
+
+&#x20; *password: ""*
+
+*});*
+
+
+
+Suppose the user types "Agney".
+
+
+
+We can update only username:
+
+
+
+*setFormData({*
+
+&#x20; *...formData,*
+
+&#x20; *username: "Agney"*
+
+*});*
+
+
+
+React now gets a new object:
+
+{
+
+&#x20; username: "Agney",
+
+&#x20; email: "",
+
+&#x20; password: ""
+
+}
+
+
+
+The other fields weren't lost.
+
+
+
+##### **Why Is ...formData Important?**
+
+
+
+Suppose you wrote:
+
+*setFormData({*
+
+&#x20; *username: "Agney"*
+
+*});*
+
+
+
+You might expect:
+
+{
+
+&#x20; username: "Agney",
+
+&#x20; email: "",
+
+&#x20; password: ""
+
+}
+
+
+
+But that's not what happens.
+
+
+
+The new state becomes:
+
+{
+
+&#x20; username: "Agney"
+
+}
+
+
+
+The old email and password properties are gone.
+
+
+
+That's why we spread the existing object:
+
+***setFormData({***
+
+&#x20; ***...formData,***
+
+&#x20; ***username: "Agney"***
+
+***});***
+
+
+
+Now Connect It to onChange
+
+
+
+We can write:
+
+
+
+*<input*
+
+&#x20; *value={formData.username}*
+
+&#x20; *onChange={(event) =>*
+
+&#x20;   *setFormData({*
+
+&#x20;     *...formData,*
+
+&#x20;     *username: event.target.value*
+
+&#x20;   *})*
+
+&#x20; *}*
+
+*/>*
+
+
+
+The flow becomes:
+
+
+
+User types
+
+&#x20;   ↓
+
+onChange
+
+&#x20;   ↓
+
+event.target.value
+
+&#x20;   ↓
+
+copy existing formData
+
+&#x20;   ↓
+
+replace username
+
+&#x20;   ↓
+
+setFormData()
+
+&#x20;   ↓
+
+React re-renders
+
+&#x20;   ↓
+
+input displays new value
+
+
+
+##### **But There's a Better Pattern**
+
+If we have:
+
+username
+
+email
+
+password
+
+
+
+we don't want to write three different handlers.
+
+
+
+We can use the input's name:
+
+*<input*
+
+&#x20; *name="username"*
+
+&#x20; *value={formData.username}*
+
+&#x20; *onChange={handleChange}*
+
+*/>*
+
+
+
+Then:
+
+*function handleChange(event) {*
+
+&#x20; *const { name, value } = event.target;*
+
+
+
+&#x20; *setFormData({*
+
+&#x20;   *...formData,*
+
+&#x20;   *\[name]: value*
+
+&#x20; *});*
+
+*}*
+
+
+
+This might look strange:
+
+*\[name]: value*
+
+
+
+But remember JavaScript's computed property names.
+
+
+
+If:
+
+*name = "username"*
+
+*value = "Agney"*
+
+
+
+then:
+
+*\[name]: value*
+
+
+
+becomes:
+
+***username: "Agney"***
+
+
+
+If:
+
+*name = "email"*
+
+*value = "agney@example.com"*
+
+
+
+it becomes:
+
+***email: "agney@example.com"***
+
+
+
+So one handler can handle multiple inputs.
+
+
+
+
+
+*import {useState} from "react";*
+
+
+
+
+
+
+
+
+
+*function App(){*
+
+&#x20; *const \[formData,setFormData]=useState({*
+
+&#x20;   *"username":"",*
+
+&#x20;   *"email":"",*
+
+&#x20;   *"password":""*
+
+&#x20; *})*
+
+
+
+&#x20; *function handleChange(event){*
+
+&#x20;   *const\[name,value]*
+
+&#x20; *}*
+
+&#x20; *function handleSubmit(event){*
+
+&#x20;   *event.preventDefault();*
+
+
+
+&#x20;   *console.log(username);*
+
+&#x20;   *console.log(email);*
+
+&#x20;   *console.log(password);*
+
+&#x20; *}*
+
+
+
+&#x20; *return(*
+
+&#x20;   *<>*
+
+&#x20;   *<form onSubmit={handleSubmit}>*
+
+&#x20;     *<input type="text" name="username" value={formDatausername}* 
+
+&#x20;     *onChange={(event)=> setUsername(event.target.value)}/>*
+
 
 
 
