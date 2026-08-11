@@ -17,10 +17,20 @@ function App(){
     });
 
   }
-  function handleSubmit(event){
+  async function handleSubmit(event){
     event.preventDefault();
+    const response=await fetch("http://localhost:8000/auth/register",{
+      method:"POST",
+      headers:{
+        "Content-Type":"application/json"
+      },
+      body:JSON.stringify(formData)
+    }
+    );
 
-    console.log(formData);
+    const data=await response.json();
+    console.log("Status:",response.status);
+    console.log("Response:",data);
   }
 
   return(

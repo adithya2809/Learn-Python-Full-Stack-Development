@@ -1906,7 +1906,7 @@ So one handler can handle multiple inputs.
 
 &#x20;   *<form onSubmit={handleSubmit}>*
 
-&#x20;     *<input type="text" name="username" value={formDatausername}* 
+&#x20;     *<input type="text" name="username" value={formDatausername}*
 
 &#x20;     *onChange={(event)=> setUsername(event.target.value)}/>*
 
@@ -2545,6 +2545,460 @@ Protected Dashboard
 
 
 That's the actual destination of Phase 4.
+
+
+
+
+
+#### **Lesson 17 — CORS**
+
+Right now you have:
+
+React
+
+localhost:5173
+
+&#x20;      ↓
+
+&#x20;    fetch()
+
+&#x20;      ↓
+
+FastAPI
+
+localhost:8000
+
+
+
+You might think:
+
+"They're both running on my computer, so why can't React just call FastAPI?"
+
+
+
+Because the browser sees these as different origins.
+
+
+
+React:
+
+http://localhost:5173
+
+
+
+FastAPI:
+
+http://localhost:8000
+
+
+
+The port is different, so the origins are different.
+
+
+
+##### **What is CORS?**
+
+
+
+CORS stands for:
+
+**Cross-Origin Resource Sharing**
+
+
+
+It is a **browser security mechanism** that controls whether a frontend from one origin is allowed to access resources from another origin.
+
+
+
+So when React tries:
+
+*fetch("http://localhost:8000/register", {*
+
+&#x20; *method: "POST",*
+
+&#x20; *...*
+
+*});*
+
+
+
+the browser checks whether FastAPI allows the React origin.
+
+
+
+If FastAPI hasn't allowed it, the browser can block the frontend from accessing the response.
+
+
+
+##### **Configure FastAPI**
+
+You already worked with FastAPI middleware in Phase 3 concepts, so this should look familiar.
+
+
+
+In your FastAPI application:
+
+*from fastapi import FastAPI*
+
+*from fastapi.middleware.cors import CORSMiddleware*
+
+
+
+*app = FastAPI()*
+
+
+
+*app.add\_middleware(*
+
+&#x20;   *CORSMiddleware,*
+
+&#x20;   *allow\_origins=\["http://localhost:5173"],*
+
+&#x20;   *allow\_credentials=True,*
+
+&#x20;   *allow\_methods=\["\*"],*
+
+&#x20;   *allow\_headers=\["\*"],*
+
+*)*
+
+
+
+The important line for our development setup is:
+
+*allow\_origins=\["http://localhost:5173"]*
+
+
+
+This tells FastAPI:
+
+Allow requests coming from my React development server.
+
+
+
+What Each Option Means
+
+
+
+***allow\_origins***
+
+allow\_origins=\["http://localhost:5173"]
+
+
+
+Which frontend origins are allowed?
+
+We're allowing your Vite React app.
+
+
+
+***allow\_methods***
+
+*allow\_methods=\["\*"]*
+
+
+
+Allows HTTP methods such as:
+
+GET
+
+POST
+
+PUT
+
+PATCH
+
+DELETE
+
+
+
+The \* means all methods.
+
+For development, that's convenient.
+
+
+
+***allow\_headers***
+
+*allow\_headers=\["\*"]*
+
+
+
+Allows request headers.
+
+This will become particularly important later when we send:
+
+Authorization: Bearer <JWT>
+
+to your protected FastAPI endpoints.
+
+
+
+***allow\_credentials***
+
+*allow\_credentials=True*
+
+
+
+Allows credential-related cross-origin requests.
+
+We'll discuss exactly when this matters when we get to authentication and JWTs.
+
+
+
+
+
+#### **Now connect React → FastAPI**
+
+Change your current handleSubmit() from:
+
+
+
+*function handleSubmit(event) {*
+
+&#x20; *event.preventDefault();*
+
+
+
+&#x20; *console.log(formData);*
+
+*}*
+
+
+
+**to:**
+
+
+
+*async function handleSubmit(event) {*
+
+&#x20; *event.preventDefault();*
+
+
+
+&#x20; *const response = await fetch("http://localhost:8000/register", {*
+
+&#x20;   *method: "POST",*
+
+&#x20;   *headers: {*
+
+&#x20;     *"Content-Type": "application/json"*
+
+&#x20;   *},*
+
+&#x20;   *body: JSON.stringify(formData)*
+
+&#x20; *});*
+
+
+
+&#x20; *const data = await response.json();*
+
+
+
+&#x20; *console.log(data);*
+
+*}*
+
+
+
+That's your first real frontend → backend request. 
+
+
+
+##### **Let's trace exactly what happens**
+
+Suppose you enter:
+
+
+
+Username: Agney
+
+Email: test@gmail.com
+
+Password: abc123
+
+
+
+Your React state becomes:
+
+*{*
+
+&#x20; *username: "Agney",*
+
+&#x20; *email: "test@gmail.com",*
+
+&#x20; *password: "abc123"*
+
+*}*
+
+
+
+Then you click Register.
+
+
+
+###### **1. Form submission**
+
+*<form onSubmit={handleSubmit}>*
+
+↓
+
+*handleSubmit(event)*
+
+
+
+###### **2. Prevent normal browser submission**
+
+*event.preventDefault();*
+
+↓
+
+
+
+The page doesn't reload.
+
+
+
+###### **3. Send request**
+
+*fetch("http://localhost:8000/register", {*
+
+
+
+with:
+
+*method: "POST"*
+
+
+
+and:
+
+*headers: {*
+
+&#x20; *"Content-Type": "application/json"*
+
+*}*
+
+
+
+and:
+
+
+
+*body: JSON.stringify(formData)*
+
+
+
+The actual JSON sent to FastAPI is:
+
+*{*
+
+&#x20; *"username": "Agney",*
+
+&#x20; *"email": "test@gmail.com",*
+
+&#x20; *"password": "abc123"*
+
+*}*
+
+
+
+###### **4. FastAPI receives it**
+
+
+
+Your endpoint:
+
+*@router.post("/register", response\_model=UserResponse)*
+
+*def register(user: UserCreate, db: Session = Depends(get\_db)):*
+
+
+
+FastAPI/Pydantic validates the incoming JSON against:
+
+UserCreate
+
+
+
+Then your code checks:
+
+existing\_user
+
+
+
+and:
+
+existing\_email
+
+
+
+If everything is valid:
+
+hash password
+
+&#x20;    ↓
+
+create Users object
+
+&#x20;    ↓
+
+db.add()
+
+&#x20;    ↓
+
+db.commit()
+
+&#x20;    ↓
+
+return db\_user
+
+
+
+Your endpoint returns:
+
+201 Created
+
+
+
+because you specified:
+
+*status\_code=status.HTTP\_201\_CREATED*
+
+
+
+###### **5. React receives the response**
+
+
+
+This:
+
+*const response = await fetch(...);*
+
+
+
+gives us the HTTP response.
+
+
+
+Then:
+
+*const data = await response.json();*
+
+
+
+extracts the JSON returned by FastAPI.
+
+
+
+So:
+
+*console.log(data);*
+
+
+
+should show the data corresponding to your UserResponse.
 
 
 
