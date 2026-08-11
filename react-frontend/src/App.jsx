@@ -1,49 +1,35 @@
-import { useState} from "react";
+import {useState} from "react";
 
 
 
 
 function App(){
-  const[count,setCount]=useState(0);
+  const[username,setUserame]=useState("");
+  const[email,setEmail]=useState("");
+  const[password,setPassword]=useState("");
 
-  function increase(){
-    setCount(count+1)
+  function handleSubmit(event){
+    event.preventDefault();
+
+    console.log(username);
+    console.log(email);
+    console.log(password);
   }
 
-  function decrease(){
-    setCount(count>0?count-1:0)
-  }
-
-  function reset(){
-    setCount(0)
-  }
   return(
     <>
-    <h1>Count:{count}</h1>
+    <form onSubmit={handleSubmit}>
+      <input type="text" value={username} 
+      onChange={(event)=> setUsername(event.target.value)}/>
 
-    <button onClick=
-    {increase}
-    >
-      Increase
-    </button>
-    <button onClick=
-      {decrease}
-    >
-      Decrease
-    </button>
+      <input type="email" value={email} 
+      onChange={(event)=> setEmail(event.target.value)} />
 
-    <button onClick={reset}>
-      Reset
-    </button>
-    <button onClick={()=>{
-      setCount(count>0?count*2:count+1);
-    }}>
-      * 2
-    </button>
-    <p>{count===0? "count is at zero":"You're counting"}</p>
-    <p>{count>=10?"You've reached 10":"Keep going!"}</p>
+      <input type="password" value={password}
+      onChange={(event) => setPassword(event.target.value)} />
+    </form>
 
-    
+    <button type="submit">Register</button>
     </>
 
     

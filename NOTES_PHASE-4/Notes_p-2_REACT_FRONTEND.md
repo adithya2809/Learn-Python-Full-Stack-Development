@@ -972,7 +972,473 @@ re-render
 
 
 
-That's the controlled input pattern. 
+That's the controlled input pattern.
+
+
+
+
+
+#### **Lesson 14 — React Forms \& onSubmit**
+
+
+
+You've already learned how a single controlled input works:
+
+*const \[email, setEmail] = useState("");*
+
+
+
+*<input*
+
+&#x20; *value={email}*
+
+&#x20; *onChange={(event) => setEmail(event.target.value)}*
+
+*/>*
+
+
+
+Now we'll put multiple inputs inside a form.
+
+This is directly preparing us for our eventual **Login and Register pages**.
+
+
+
+##### **1. The Basic Form**
+
+
+
+A normal HTML form looks like:
+
+*<form>*
+
+&#x20;   *<input>*
+
+&#x20;   *<button type="submit">Submit</button>*
+
+*</form>*
+
+
+
+In **React**, we do:
+
+*<form onSubmit={handleSubmit}>*
+
+&#x20;   *...*
+
+*</form>*
+
+
+
+The important difference is:
+
+*onSubmit={handleSubmit}*
+
+
+
+We're telling React:
+
+"When this form is submitted, call handleSubmit."
+
+
+
+##### **2. Create the Submit Handler**
+
+*function handleSubmit(event) {*
+
+&#x20;   *event.preventDefault();*
+
+
+
+&#x20;   *console.log("Form submitted");*
+
+*}*
+
+
+
+Now:
+
+*<form onSubmit={handleSubmit}>*
+
+
+
+When the user clicks Submit:
+
+Submit button
+
+&#x20;     ↓
+
+Form submission
+
+&#x20;     ↓
+
+onSubmit
+
+&#x20;     ↓
+
+handleSubmit()
+
+&#x20;     ↓
+
+"Form submitted"
+
+
+
+##### **3. Why event.preventDefault()?**
+
+This is important.
+
+
+
+By default, an HTML form submission causes the browser to perform its traditional form behavior, which can include navigating/reloading the page.
+
+We don't want that in a React application.
+
+
+
+Instead:
+
+*event.preventDefault();*
+
+
+
+means:
+
+"Stop the browser's default form submission behavior. Let React handle it."
+
+
+
+So:
+
+**Without preventDefault()**
+
+&#x20;       ↓
+
+Browser handles form
+
+&#x20;       ↓
+
+Possible page reload/navigation
+
+
+
+**With preventDefault()**
+
+&#x20;       ↓
+
+React handles form
+
+&#x20;       ↓
+
+We control what happens
+
+
+
+This becomes especially important when we eventually send the form data to API using fetch().
+
+
+
+##### **4. Multiple Controlled Inputs**
+
+Let's build a small login-style form.
+
+
+
+*import { useState } from "react";*
+
+
+
+*function App() {*
+
+&#x20; *const \[username, setUsername] = useState("");*
+
+&#x20; *const \[password, setPassword] = useState("");*
+
+
+
+&#x20; *function handleSubmit(event) {*
+
+&#x20;   *event.preventDefault();*
+
+
+
+&#x20;   *console.log(username);*
+
+&#x20;   *console.log(password);*
+
+&#x20; *}*
+
+
+
+&#x20; *return (*
+
+&#x20;   *<form onSubmit={handleSubmit}>*
+
+&#x20;     *<input*
+
+&#x20;       *type="text"*
+
+&#x20;       *value={username}*
+
+&#x20;       *onChange={(event) => setUsername(event.target.value)}*
+
+&#x20;     */>*
+
+
+
+&#x20;     *<input*
+
+&#x20;       *type="password"*
+
+&#x20;       *value={password}*
+
+&#x20;       *onChange={(event) => setPassword(event.target.value)}*
+
+&#x20;     */>*
+
+
+
+&#x20;     *<button type="submit">*
+
+&#x20;       *Login*
+
+&#x20;     *</button>*
+
+&#x20;   *</form>*
+
+&#x20; *);*
+
+*}*
+
+
+
+*export default App;*
+
+
+
+Now we have two separate pieces of state:
+
+username → state
+
+password → state
+
+
+
+##### **5. What Happens When the User Types?**
+
+
+
+Suppose the user enters:
+
+username: Agney
+
+password: hello123
+
+
+
+**For username:**
+
+
+
+User types "Agney"
+
+&#x20;      ↓
+
+onChange
+
+&#x20;      ↓
+
+event.target.value
+
+&#x20;      ↓
+
+setUsername("Agney")
+
+&#x20;      ↓
+
+username state = "Agney"
+
+
+
+**For password:**
+
+
+
+User types "hello123"
+
+&#x20;      ↓
+
+onChange
+
+&#x20;      ↓
+
+event.target.value
+
+&#x20;      ↓
+
+setPassword("hello123")
+
+&#x20;      ↓
+
+password state = "hello123"
+
+
+
+Then the user clicks:
+
+Login
+
+
+
+The form executes:
+
+*handleSubmit(event)*
+
+
+
+and:
+
+*event.preventDefault();*
+
+prevents the browser from doing its default form submission.
+
+
+
+Then:
+
+*console.log(username);*
+
+*console.log(password);*
+
+
+
+prints:
+
+Agney
+
+hello123
+
+
+
+##### **6. Important: type="submit"**
+
+Notice:
+
+
+
+*<button type="submit">*
+
+&#x20; *Login*
+
+*</button>*
+
+
+
+This tells the browser:
+
+This button submits the form.
+
+
+
+Because it's inside:
+
+*<form onSubmit={handleSubmit}>*
+
+
+
+clicking it triggers:
+
+button
+
+&#x20;↓
+
+form submit
+
+&#x20;↓
+
+onSubmit
+
+&#x20;↓
+
+handleSubmit()
+
+
+
+This is better than putting onClick on the Login button for form submission.
+
+
+
+**Why?**
+
+Because a form can also be submitted by pressing Enter inside an input.
+
+
+
+With onSubmit, both cases are handled:
+
+Click Login
+
+&#x20;     ↓
+
+&#x20;  onSubmit
+
+
+
+Press Enter
+
+&#x20;     ↓
+
+&#x20;  onSubmit
+
+
+
+That's why we generally use onSubmit for forms.
+
+
+
+##### **7. From Here to Backend**
+
+
+
+Eventually:
+
+
+
+React Login Form
+
+&#x20;      ↓
+
+username
+
+password
+
+&#x20;      ↓
+
+handleSubmit()
+
+&#x20;      ↓
+
+fetch()
+
+&#x20;      ↓
+
+API /login
+
+&#x20;      ↓
+
+JWT
+
+&#x20;      ↓
+
+React stores authentication state
+
+&#x20;      ↓
+
+Dashboard
+
+
+
+
 
 
 
