@@ -1914,3 +1914,639 @@ So one handler can handle multiple inputs.
 
 
 
+#### **Lesson 16 — Fetch API**
+
+So far, our data has stayed inside React:
+
+
+
+React Form
+
+&#x20;  ↓
+
+formData
+
+&#x20;  ↓
+
+console.log()
+
+
+
+**But our actual goal is:**
+
+React
+
+&#x20;  ↓
+
+HTTP Request
+
+&#x20;  ↓
+
+FastAPI/Backend
+
+&#x20;  ↓
+
+Database
+
+
+
+The browser needs a way to make that HTTP request.
+
+
+
+That's where fetch() comes in.
+
+
+
+##### **1. What is fetch()?**
+
+fetch() is a JavaScript API used to make HTTP requests.
+
+
+
+For example:
+
+fetch("http://localhost:8000/students");
+
+
+
+This means:
+
+"Browser, send an HTTP request to this URL."
+
+
+
+By default, fetch() makes a GET request.
+
+
+
+So conceptually:
+
+React
+
+&#x20; ↓
+
+fetch()
+
+&#x20; ↓
+
+GET /students
+
+&#x20; ↓
+
+FastAPI
+
+
+
+##### **2. GET Request**
+
+Suppose your FastAPI backend has:
+
+
+
+*@app.get("/students")*
+
+*def get\_students():*
+
+&#x20;   *...*
+
+
+
+React can request it:
+
+fetch("http://localhost:8000/students");
+
+
+
+But there's an important thing:
+
+fetch() returns a Promise.
+
+
+
+##### **3. Using async/await**
+
+We can write:
+
+*async function getStudents() {*
+
+&#x20; *const response = await fetch(*
+
+&#x20;   *"http://localhost:8000/students"*
+
+&#x20; *);*
+
+
+
+&#x20; *console.log(response);*
+
+*}*
+
+
+
+The flow is:
+
+getStudents()
+
+&#x20;     ↓
+
+fetch()
+
+&#x20;     ↓
+
+HTTP request
+
+&#x20;     ↓
+
+Wait for FastAPI response
+
+&#x20;     ↓
+
+response
+
+
+
+##### **4. But response Isn't Yet the JSON Data**
+
+This is an important distinction.
+
+
+
+Suppose FastAPI returns:
+
+
+
+\[
+
+&#x20; {
+
+&#x20;   "id": 1,
+
+&#x20;   "name": "Agney"
+
+&#x20; },
+
+&#x20; {
+
+&#x20;   "id": 2,
+
+&#x20;   "name": "Rahul"
+
+&#x20; }
+
+]
+
+
+
+After:
+
+*const response = await fetch(url);*
+
+
+
+response is a Response object.
+
+
+
+It contains information about the HTTP response, such as:
+
+response
+
+├── status
+
+├── ok
+
+├── headers
+
+└── body
+
+
+
+To extract the JSON body, we use:
+
+*const data = await response.json();*
+
+
+
+So:
+
+*async function getStudents() {*
+
+&#x20; *const response = await fetch(*
+
+&#x20;   *"http://localhost:8000/students"*
+
+&#x20; *);*
+
+
+
+&#x20; *const data = await response.json();*
+
+
+
+&#x20; *console.log(data);*
+
+*}*
+
+
+
+Now data contains the actual JavaScript representation of the JSON.
+
+
+
+##### **5. The Two awaits**
+
+
+
+This is worth understanding.
+
+
+
+***const response = await fetch(url);***
+
+
+
+means:
+
+Wait for the **HTTP response.**
+
+
+
+Then:
+
+***const data = await response.json();***
+
+
+
+means:
+
+Wait for the response body to be parsed as **JSON**.
+
+
+
+So:
+
+await fetch()
+
+&#x20;     ↓
+
+Response object
+
+&#x20;     ↓
+
+await response.json()
+
+&#x20;     ↓
+
+Actual data
+
+
+
+##### **6. Checking HTTP Status**
+
+Suppose FastAPI returns:
+
+200 OK
+
+
+
+or:
+
+
+
+404 Not Found
+
+
+
+or:
+
+
+
+401 Unauthorized
+
+
+
+You can inspect:
+
+*response.status*
+
+
+
+For example:
+
+*if (response.ok) {*
+
+&#x20; *console.log("Request successful");*
+
+*} else {*
+
+&#x20; *console.log("Request failed:", response.status);*
+
+*}*
+
+
+
+response.ok is true for successful HTTP responses in the 2xx range.
+
+
+
+##### **7. POST Request**
+
+Now we get to something directly relevant to your registration form.
+
+
+
+Suppose:
+
+*const formData = {*
+
+&#x20; *username: "Agney",*
+
+&#x20; *email: "agney@example.com",*
+
+&#x20; *password: "abc123"*
+
+*};*
+
+
+
+We want to send this to FastAPI.
+
+
+
+We use:
+
+*fetch("http://localhost:8000/register", {*
+
+&#x20; *method: "POST",*
+
+
+
+&#x20; *headers: {*
+
+&#x20;   *"Content-Type": "application/json"*
+
+&#x20; *},*
+
+
+
+&#x20; *body: JSON.stringify(formData)*
+
+*});*
+
+
+
+**Let's break this apart.**
+
+
+
+###### **method**
+
+*method: "POST"*
+
+
+
+Tells the server:
+
+This is a POST request.
+
+
+
+###### **headers**
+
+*headers: {*
+
+&#x20; *"Content-Type": "application/json"*
+
+*}*
+
+
+
+Tells FastAPI:
+
+The body I'm sending is JSON.
+
+
+
+This is important because your FastAPI endpoint might expect a Pydantic model.
+
+
+
+For example:
+
+*class UserRegister(BaseModel):*
+
+&#x20;   *username: str*
+
+&#x20;   *email: str*
+
+&#x20;   *password: str*
+
+
+
+The JSON sent by React:
+
+*{*
+
+&#x20; *"username": "Agney",*
+
+&#x20; *"email": "agney@example.com",*
+
+&#x20; *"password": "abc123"*
+
+*}*
+
+
+
+can then be validated by FastAPI/Pydantic.
+
+
+
+##### **8. Why JSON.stringify()?**
+
+Your React state is a JavaScript object:
+
+
+
+*formData = {*
+
+&#x20; *username: "Agney",*
+
+&#x20; *email: "agney@example.com",*
+
+&#x20; *password: "abc123"*
+
+*};*
+
+
+
+But HTTP request bodies are transmitted as data, and for a JSON API we need to convert the JavaScript object into a JSON string.
+
+
+
+So:
+
+*JSON.stringify(formData)*
+
+
+
+produces:
+
+*"{\\"username\\":\\"Agney\\",\\"email\\":\\"agney@example.com\\",\\"password\\":\\"abc123\\"}"*
+
+
+
+Conceptually:
+
+JavaScript object
+
+&#x20;      ↓
+
+JSON.stringify()
+
+&#x20;      ↓
+
+JSON
+
+&#x20;      ↓
+
+HTTP request
+
+&#x20;      ↓
+
+FastAPI
+
+
+
+##### **9. Complete POST Example**
+
+*async function registerUser() {*
+
+&#x20; *const formData = {*
+
+&#x20;   *username: "Agney",*
+
+&#x20;   *email: "agney@example.com",*
+
+&#x20;   *password: "abc123"*
+
+&#x20; *};*
+
+
+
+&#x20; *const response = await fetch(*
+
+&#x20;   *"http://localhost:8000/register",*
+
+&#x20;   *{*
+
+&#x20;     *method: "POST",*
+
+&#x20;     *headers: {*
+
+&#x20;       *"Content-Type": "application/json"*
+
+&#x20;     *},*
+
+&#x20;     *body: JSON.stringify(formData)*
+
+&#x20;   *}*
+
+&#x20; *);*
+
+
+
+&#x20; *const data = await response.json();*
+
+
+
+&#x20; *console.log(data);*
+
+*}*
+
+
+
+This is essentially the bridge between what you've already learned in FastAPI and what we're learning now in React.
+
+
+
+##### **10. Connecting It to Your Form**
+
+Eventually our form will look like:
+
+User
+
+&#x20;↓
+
+fills form
+
+&#x20;↓
+
+formData
+
+&#x20;↓
+
+Submit
+
+&#x20;↓
+
+handleSubmit()
+
+&#x20;↓
+
+fetch()
+
+&#x20;↓
+
+POST /register
+
+&#x20;↓
+
+FastAPI
+
+&#x20;↓
+
+Database
+
+
+
+And later for login:
+
+User
+
+&#x20;↓
+
+username + password
+
+&#x20;↓
+
+React
+
+&#x20;↓
+
+POST /login
+
+&#x20;↓
+
+FastAPI
+
+&#x20;↓
+
+JWT
+
+&#x20;↓
+
+React
+
+&#x20;↓
+
+Protected Dashboard
+
+
+
+That's the actual destination of Phase 4.
+
+
+
+
+
