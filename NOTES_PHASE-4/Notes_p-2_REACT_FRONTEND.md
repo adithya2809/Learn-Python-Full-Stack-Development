@@ -4404,3 +4404,177 @@ This is exactly the kind of thing we'll eventually do with your FastAPI backend.
 
 
 
+##### **The Three useEffect Patterns**
+
+This is the part I want you to memorize conceptually:
+
+
+
+###### **1. No dependency array**
+
+*useEffect(() => {*
+
+&#x20; *// effect*
+
+*});*
+
+
+
+➡️ Runs after every render.
+
+
+
+###### **2. Empty dependency array**
+
+*useEffect(() => {*
+
+&#x20; *// effect*
+
+*}, \[]);*
+
+
+
+➡️ Runs after the initial render.
+
+
+
+###### **3. Dependencies**
+
+*useEffect(() => {*
+
+&#x20; *// effect*
+
+*}, \[count]);*
+
+
+
+➡️ Runs after the initial render and whenever count changes.
+
+
+
+##### **🚀 Let's Actually Use useEffect**
+
+Now we're going to fetch data from your FastAPI backend automatically.
+
+
+
+Create a simple component:
+
+
+
+*import { useEffect, useState } from "react";*
+
+
+
+*function App() {*
+
+&#x20; *const \[students, setStudents] = useState(\[]);*
+
+
+
+&#x20; *useEffect(() => {*
+
+&#x20;   *async function getStudents() {*
+
+&#x20;     *const response = await fetch(*
+
+&#x20;       *"http://localhost:8000/students"*
+
+&#x20;     *);*
+
+
+
+&#x20;     *const data = await response.json();*
+
+
+
+&#x20;     *setStudents(data);*
+
+&#x20;   *}*
+
+
+
+&#x20;   *getStudents();*
+
+&#x20; *}, \[]);*
+
+
+
+&#x20; *return (*
+
+&#x20;   *<>*
+
+&#x20;     *<h1>Students</h1>*
+
+
+
+&#x20;     *{students.map((student) => (*
+
+&#x20;       *<p key={student.id}>*
+
+&#x20;         *{student.name}*
+
+&#x20;       *</p>*
+
+&#x20;     *))}*
+
+&#x20;   *</>*
+
+&#x20; *);*
+
+*}*
+
+
+
+*export default App;*
+
+
+
+Don't worry about every line yet.
+
+The important flow is:
+
+App renders
+
+&#x20;  ↓
+
+students = \[]
+
+&#x20;  ↓
+
+useEffect runs
+
+&#x20;  ↓
+
+getStudents()
+
+&#x20;  ↓
+
+fetch()
+
+&#x20;  ↓
+
+FastAPI
+
+&#x20;  ↓
+
+data
+
+&#x20;  ↓
+
+setStudents(data)
+
+&#x20;  ↓
+
+React re-renders
+
+&#x20;  ↓
+
+students.map(...)
+
+&#x20;  ↓
+
+Students appear
+
+
+

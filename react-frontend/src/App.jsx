@@ -1,7 +1,19 @@
-import {useState} from "react";
+import {useState,useEffect} from "react";
 
 
 function App(){
+  
+  const [students,setStudents]=useState([]);
+  useEffect(()=>{
+    async function getStudents(){
+      const response=await fetch("http://localhost:8000/students");
+      const data=await response.json();
+
+      setStudents(data);
+
+    }
+    getStudents();
+  },[]);
   const [formData,setFormData]=useState({
     "username":"",
     "email":"",
@@ -53,10 +65,9 @@ function App(){
       setLoading(false);
     }
   }
-  
-  return (
+  return(
     <>
-    <form onSubmit={handleSubmit}>
+     <form onSubmit={handleSubmit}>
       <input type="text" name="username" value={formData.username} 
       onChange={handleChange}/>
 
@@ -71,11 +82,14 @@ function App(){
       {message&&<p>{message}</p>}
       {error&&<p>{error}</p>}
     </form>
-
+    <h1>Students</h1>
+    {students.map((student)=>(
+      <p key={student.id}>{student.name}</p>
+    ))}
     </>
 
-    
   );
+  
 
 }
 export default App;
