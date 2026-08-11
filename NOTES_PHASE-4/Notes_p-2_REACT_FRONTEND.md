@@ -2802,7 +2802,7 @@ Change your current handleSubmit() from:
 
 
 
-That's your first real frontend → backend request. 
+That's your first real frontend → backend request.
 
 
 
@@ -3001,6 +3001,1406 @@ So:
 should show the data corresponding to your UserResponse.
 
 
+
+
+
+#### **Proper Success \& Error Handling**
+
+
+
+Right now we're doing:
+
+*const data = await response.json();*
+
+*console.log(data);*
+
+
+
+But a real application shouldn't just print the response.
+
+
+
+We want the UI to say something like:
+
+Registration successful! 🎉
+
+
+
+or:
+
+
+
+Username already exists
+
+
+
+So let's introduce state for the API response.
+
+
+
+Add:
+
+*const \[message, setMessage] = useState("");*
+
+*const \[error, setError] = useState("");*
+
+
+
+Then modify your submit handler:
+
+
+
+*async function handleSubmit(event) {*
+
+&#x20; *event.preventDefault();*
+
+
+
+&#x20; *setMessage("");*
+
+&#x20; *setError("");*
+
+
+
+&#x20; *const response = await fetch("http://localhost:8000/register", {*
+
+&#x20;   *method: "POST",*
+
+&#x20;   *headers: {*
+
+&#x20;     *"Content-Type": "application/json"*
+
+&#x20;   *},*
+
+&#x20;   *body: JSON.stringify(formData)*
+
+&#x20; *});*
+
+
+
+&#x20; *const data = await response.json();*
+
+
+
+&#x20; *if (response.ok) {*
+
+&#x20;   *setMessage("Registration successful!");*
+
+&#x20; *} else {*
+
+&#x20;   *setError(data.detail);*
+
+&#x20; *}*
+
+*}*
+
+
+
+Then in your JSX:
+
+*{message \&\& <p>{message}</p>}*
+
+*{error \&\& <p>{error}</p>}*
+
+
+
+##### **Why response.ok?**
+
+
+
+You already saw:
+
+201 → success
+
+400 → error
+
+
+
+Instead of manually checking every status code:
+
+*if (response.status === 201)*
+
+
+
+we can use:
+
+*if (response.ok)*
+
+
+
+response.ok is true for successful 2xx responses and false otherwise.
+
+
+
+So:
+
+201 → response.ok = true
+
+400 → response.ok = false
+
+
+
+##### **Why setMessage("") and setError("")?**
+
+Imagine this sequence:
+
+
+
+First attempt
+
+→ Registration successful!
+
+
+
+Second attempt
+
+→ Username already exists
+
+
+
+If we don't clear the previous message, the UI could potentially retain stale information.
+
+
+
+So at the beginning:
+
+*setMessage("");*
+
+*setError("");*
+
+
+
+we reset the previous result before processing the new request.
+
+
+
+
+
+#### **Lesson 18 — Loading, Errors \& try/catch/finally**
+
+
+
+Our registration request currently handles HTTP errors like 400, but there's another type of failure we need to handle.
+
+
+
+For example:
+
+React
+
+&#x20;↓
+
+fetch()
+
+&#x20;↓
+
+Network failure ❌
+
+&#x20;↓
+
+No response
+
+
+
+Maybe FastAPI isn't running, the server is unreachable, or the network connection fails.
+
+
+
+In that situation, we need **try/catch.**
+
+
+
+##### **1. Loading State**
+
+Add:
+
+*const \[loading, setLoading] = useState(false);*
+
+
+
+This represents:
+
+*loading = false*
+
+→ no request currently running
+
+
+
+*loading = true*
+
+→ request currently running
+
+
+
+Our submit handler becomes:
+
+*async function handleSubmit(event) {*
+
+&#x20; *event.preventDefault();*
+
+
+
+&#x20; *setMessage("");*
+
+&#x20; *setError("");*
+
+&#x20; *setLoading(true);*
+
+
+
+&#x20; *// API request...*
+
+
+
+&#x20; *setLoading(false);*
+
+*}*
+
+
+
+##### **2. Why try/catch?**
+
+Consider:
+
+*const response = await fetch("http://localhost:8000/auth/register");*
+
+
+
+What if FastAPI isn't running?
+
+There may be no HTTP response at all.
+
+
+
+That's different from:
+
+400 Bad Request
+
+
+
+A 400 is still a valid HTTP response.
+
+
+
+But a network failure means the request itself failed.
+
+
+
+So we use:
+
+***try {***
+
+&#x20; ***// request***
+
+***} catch (error) {***
+
+&#x20; ***// network/unexpected error***
+
+***}***
+
+
+
+##### **3. try/catch**
+
+Our handler can become:
+
+*async function handleSubmit(event) {*
+
+&#x20; *event.preventDefault();*
+
+
+
+&#x20; *setMessage("");*
+
+&#x20; *setError("");*
+
+&#x20; *setLoading(true);*
+
+
+
+&#x20; *try {*
+
+&#x20;   *const response = await fetch(*
+
+&#x20;     *"http://localhost:8000/auth/register",*
+
+&#x20;     *{*
+
+&#x20;       *method: "POST",*
+
+&#x20;       *headers: {*
+
+&#x20;         *"Content-Type": "application/json"*
+
+&#x20;       *},*
+
+&#x20;       *body: JSON.stringify(formData)*
+
+&#x20;     *}*
+
+&#x20;   *);*
+
+
+
+&#x20;   *const data = await response.json();*
+
+
+
+&#x20;   *if (response.ok) {*
+
+&#x20;     *setMessage("Registration successful!");*
+
+&#x20;   *} else {*
+
+&#x20;     *setError(data.detail);*
+
+&#x20;   *}*
+
+
+
+&#x20; *} catch (error) {*
+
+&#x20;   *setError("Unable to connect to the server.");*
+
+&#x20; *}*
+
+
+
+&#x20; *setLoading(false);*
+
+*}*
+
+
+
+Now we handle both:
+
+HTTP error
+
+&#x20;   ↓
+
+response.ok === false
+
+&#x20;   ↓
+
+setError(data.detail)
+
+
+
+and:
+
+
+
+Network error
+
+&#x20;   ↓
+
+catch
+
+&#x20;   ↓
+
+setError(...)
+
+
+
+##### **4. But There's a Problem**
+
+Look at:
+
+*setLoading(false);*
+
+
+
+What if an error happens?
+
+The catch runs, but we still need to make sure loading gets turned off.
+
+This is exactly what finally is for.
+
+
+
+##### **5. finally**
+
+JavaScript provides:
+
+
+
+*try {*
+
+&#x20; *// attempt something*
+
+*} catch (error) {*
+
+&#x20; *// handle failure*
+
+*} finally {*
+
+&#x20; *// always execute*
+
+*}*
+
+
+
+So our handler becomes:
+
+
+
+*async function handleSubmit(event) {*
+
+&#x20; *event.preventDefault();*
+
+
+
+&#x20; *setMessage("");*
+
+&#x20; *setError("");*
+
+&#x20; *setLoading(true);*
+
+
+
+&#x20; *try {*
+
+&#x20;   *const response = await fetch(*
+
+&#x20;     *"http://localhost:8000/auth/register",*
+
+&#x20;     *{*
+
+&#x20;       *method: "POST",*
+
+&#x20;       *headers: {*
+
+&#x20;         *"Content-Type": "application/json"*
+
+&#x20;       *},*
+
+&#x20;       *body: JSON.stringify(formData)*
+
+&#x20;     *}*
+
+&#x20;   *);*
+
+
+
+&#x20;   *const data = await response.json();*
+
+
+
+&#x20;   *if (response.ok) {*
+
+&#x20;     *setMessage("Registration successful!");*
+
+&#x20;   *} else {*
+
+&#x20;     *setError(data.detail);*
+
+&#x20;   *}*
+
+
+
+&#x20; *} catch (error) {*
+
+&#x20;   *setError("Unable to connect to the server.");*
+
+
+
+&#x20; *} finally {*
+
+&#x20;   *setLoading(false);*
+
+&#x20; *}*
+
+*}*
+
+
+
+Now regardless of what happens:
+
+**Success**
+
+&#x20;  ↓
+
+finally
+
+&#x20;  ↓
+
+loading = false
+
+
+
+or:
+
+
+
+**400 error**
+
+&#x20;  ↓
+
+finally
+
+&#x20;  ↓
+
+loading = false
+
+
+
+or:
+
+
+
+**Network failure**
+
+&#x20;  ↓
+
+catch
+
+&#x20;  ↓
+
+finally
+
+&#x20;  ↓
+
+loading = false
+
+
+
+##### **6. Use Loading State in the Button**
+
+Currently:
+
+
+
+*<button type="submit">*
+
+&#x20; *Register*
+
+*</button>*
+
+
+
+We can make it dynamic:
+
+*<button type="submit" disabled={loading}>*
+
+&#x20; *{loading ? "Registering..." : "Register"}*
+
+*</button>*
+
+
+
+Now:
+
+
+
+Normal:
+
+\[ Register ]
+
+
+
+While request is running:
+
+\[ Registering... ]
+
+
+
+And:
+
+
+
+disabled={loading}
+
+
+
+prevents the user from repeatedly clicking the button while the request is running.
+
+
+
+##### **7. Complete Version**
+
+Your component can now look like:
+
+
+
+*import { useState } from "react";*
+
+
+
+*function App() {*
+
+&#x20; *const \[formData, setFormData] = useState({*
+
+&#x20;   *username: "",*
+
+&#x20;   *email: "",*
+
+&#x20;   *password: ""*
+
+&#x20; *});*
+
+
+
+&#x20; *const \[message, setMessage] = useState("");*
+
+&#x20; *const \[error, setError] = useState("");*
+
+&#x20; *const \[loading, setLoading] = useState(false);*
+
+
+
+&#x20; *function handleChange(event) {*
+
+&#x20;   *const { name, value } = event.target;*
+
+
+
+&#x20;   *setFormData({*
+
+&#x20;     *...formData,*
+
+&#x20;     *\[name]: value*
+
+&#x20;   *});*
+
+&#x20; *}*
+
+
+
+&#x20; *async function handleSubmit(event) {*
+
+&#x20;   *event.preventDefault();*
+
+
+
+&#x20;   *setMessage("");*
+
+&#x20;   *setError("");*
+
+&#x20;   *setLoading(true);*
+
+
+
+&#x20;   *try {*
+
+&#x20;     *const response = await fetch(*
+
+&#x20;       *"http://localhost:8000/auth/register",*
+
+&#x20;       *{*
+
+&#x20;         *method: "POST",*
+
+&#x20;         *headers: {*
+
+&#x20;           *"Content-Type": "application/json"*
+
+&#x20;         *},*
+
+&#x20;         *body: JSON.stringify(formData)*
+
+&#x20;       *}*
+
+&#x20;     *);*
+
+
+
+&#x20;     *const data = await response.json();*
+
+
+
+&#x20;     *if (response.ok) {*
+
+&#x20;       *setMessage("Registration successful!");*
+
+&#x20;     *} else {*
+
+&#x20;       *setError(data.detail);*
+
+&#x20;     *}*
+
+
+
+&#x20;   *} catch (error) {*
+
+&#x20;     *setError("Unable to connect to the server.");*
+
+
+
+&#x20;   *} finally {*
+
+&#x20;     *setLoading(false);*
+
+&#x20;   *}*
+
+&#x20; *}*
+
+
+
+&#x20; *return (*
+
+&#x20;   *<form onSubmit={handleSubmit}>*
+
+
+
+&#x20;     *<input*
+
+&#x20;       *type="text"*
+
+&#x20;       *name="username"*
+
+&#x20;       *value={formData.username}*
+
+&#x20;       *onChange={handleChange}*
+
+&#x20;     */>*
+
+
+
+&#x20;     *<input*
+
+&#x20;       *type="email"*
+
+&#x20;       *name="email"*
+
+&#x20;       *value={formData.email}*
+
+&#x20;       *onChange={handleChange}*
+
+&#x20;     */>*
+
+
+
+&#x20;     *<input*
+
+&#x20;       *type="password"*
+
+&#x20;       *name="password"*
+
+&#x20;       *value={formData.password}*
+
+&#x20;       *onChange={handleChange}*
+
+&#x20;     */>*
+
+
+
+&#x20;     *<button type="submit" disabled={loading}>*
+
+&#x20;       *{loading ? "Registering..." : "Register"}*
+
+&#x20;     *</button>*
+
+
+
+&#x20;     *{message \&\& <p>{message}</p>}*
+
+
+
+&#x20;     *{error \&\& <p>{error}</p>}*
+
+
+
+&#x20;   *</form>*
+
+&#x20; *);*
+
+*}*
+
+
+
+*export default App;*
+
+
+
+##### **Important Distinction**
+
+There are now three different situations:
+
+
+
+**1. Successful HTTP request**
+
+201
+
+↓
+
+response.ok === true
+
+↓
+
+Registration successful
+
+
+
+**2. Server responded with an error**
+
+400
+
+↓
+
+response.ok === false
+
+↓
+
+data.detail
+
+↓
+
+Show backend error
+
+
+
+**3. Request couldn't be completed**
+
+FastAPI unavailable
+
+↓
+
+fetch throws
+
+↓
+
+catch
+
+↓
+
+"Unable to connect..."
+
+
+
+This distinction is extremely useful when debugging real applications.
+
+
+
+
+
+#### **Lesson 19 — useEffect()**
+
+So far, you've learned how React responds to user actions:
+
+User clicks
+
+&#x20;  ↓
+
+onClick
+
+&#x20;  ↓
+
+setState
+
+&#x20;  ↓
+
+Re-render
+
+
+
+But what if we want React to perform an operation because the component rendered or because some state changed?
+
+That's where **useEffect()** comes in.
+
+
+
+##### **1. First, understand the problem**
+
+Imagine our Dashboard needs to load students when it opens.
+
+
+
+We don't want:
+
+User clicks "Load Students"
+
+&#x20;       ↓
+
+fetch()
+
+
+
+**We want:**
+
+Dashboard opens
+
+&#x20;       ↓
+
+React renders
+
+&#x20;       ↓
+
+Fetch students automatically
+
+
+
+This is an effect.
+
+
+
+##### **2. Basic useEffect**
+
+Import it:
+
+
+
+*import { useEffect, useState } from "react";*
+
+
+
+Then:
+
+*useEffect(() => {*
+
+&#x20; *console.log("Component rendered");*
+
+*}, \[]);*
+
+
+
+The structure is:
+
+*useEffect(*
+
+&#x20; *() => {*
+
+&#x20;   *// effect code*
+
+&#x20; *},*
+
+&#x20; *\[]*
+
+*);*
+
+
+
+The second argument is called the **dependency array.**
+
+
+
+##### **3. What does \[] mean?**
+
+When you write:
+
+*useEffect(() => {*
+
+&#x20; *console.log("Component rendered");*
+
+*}, \[]);*
+
+
+
+the empty dependency array means:
+
+Run this effect after the component's initial render.
+
+
+
+Conceptually:
+
+Component starts
+
+&#x20;     ↓
+
+React renders
+
+&#x20;     ↓
+
+UI appears
+
+&#x20;     ↓
+
+useEffect runs
+
+
+
+So if your component is:
+
+
+
+*function App() {*
+
+
+
+&#x20; *useEffect(() => {*
+
+&#x20;   *console.log("Hello from effect");*
+
+&#x20; *}, \[]);*
+
+
+
+&#x20; *return <h1>Hello</h1>;*
+
+*}*
+
+
+
+the browser displays:
+
+
+
+Hello
+
+
+
+and the console prints:
+
+Hello from effect
+
+
+
+##### **4. Why does the effect run after rendering?**
+
+Remember React's basic process:
+
+
+
+Component function
+
+&#x20;     ↓
+
+JSX
+
+&#x20;     ↓
+
+React creates/updates UI
+
+&#x20;     ↓
+
+Browser UI
+
+&#x20;     ↓
+
+useEffect
+
+
+
+Effects are intended for operations that happen after rendering.
+
+
+
+Examples include:
+
+Fetching data
+
+Starting timers
+
+Subscribing to something
+
+Synchronizing with an external system
+
+Working with browser APIs
+
+
+
+##### **5. useEffect Without Dependencies**
+
+Consider:
+
+*useEffect(() => {*
+
+&#x20; *console.log("Effect");*
+
+*});*
+
+
+
+There is no dependency array.
+
+
+
+That means the effect runs after **every render.**
+
+
+
+For example:
+
+Initial render
+
+&#x20;↓
+
+Effect
+
+
+
+State changes
+
+&#x20;↓
+
+Re-render
+
+&#x20;↓
+
+Effect
+
+
+
+State changes
+
+&#x20;↓
+
+Re-render
+
+&#x20;↓
+
+Effect
+
+
+
+So:
+
+*useEffect(() => {*
+
+&#x20; *console.log("Effect");*
+
+*});*
+
+
+
+means:
+
+Run after every render.
+
+
+
+##### **6. useEffect With \[]**
+
+*useEffect(() => {*
+
+&#x20; *console.log("Effect");*
+
+*}, \[]);*
+
+
+
+means:
+
+Run after the initial render.
+
+
+
+Conceptually:
+
+Initial render
+
+&#x20;↓
+
+Effect ✅
+
+
+
+Re-render
+
+&#x20;↓
+
+Effect ❌
+
+
+
+Re-render
+
+&#x20;↓
+
+Effect ❌
+
+
+
+This is commonly used for initial data fetching.
+
+
+
+##### **7. useEffect With Dependencies**
+
+
+
+Now consider:
+
+
+
+*const \[count, setCount] = useState(0);*
+
+
+
+*useEffect(() => {*
+
+&#x20; *console.log("Count changed");*
+
+*}, \[count]);*
+
+
+
+The dependency array contains:
+
+\[count]
+
+
+
+So React watches count.
+
+
+
+When count changes:
+
+count = 0
+
+&#x20;↓
+
+Initial render
+
+&#x20;↓
+
+Effect
+
+
+
+setCount(1)
+
+&#x20;↓
+
+Re-render
+
+&#x20;↓
+
+count changed
+
+&#x20;↓
+
+Effect
+
+
+
+setCount(2)
+
+&#x20;↓
+
+Re-render
+
+&#x20;↓
+
+count changed
+
+&#x20;↓
+
+Effect
+
+
+
+So:
+
+\[count]
+
+
+
+means:
+
+Run the effect after the initial render and whenever count changes.
+
+
+
+##### **8. Compare the Three Forms**
+
+**No dependency array**
+
+*useEffect(() => {*
+
+&#x20; *...*
+
+*});*
+
+Every render
+
+
+
+**Empty dependency array**
+
+*useEffect(() => {*
+
+&#x20; *...*
+
+*}, \[]);*
+
+Initial render
+
+
+
+**Dependency array**
+
+*useEffect(() => {*
+
+&#x20; *...*
+
+*}, \[count]);*
+
+Initial render
+
+\+
+
+when count changes
+
+
+
+This distinction is extremely important.
+
+
+
+##### **9. Why Does This Matter for Our FastAPI Project?**
+
+Suppose we have a Dashboard:
+
+
+
+*function Dashboard() {*
+
+&#x20; *const \[students, setStudents] = useState(\[]);*
+
+
+
+&#x20; *useEffect(() => {*
+
+&#x20;   *fetch("http://localhost:8000/students");*
+
+&#x20; *}, \[]);*
+
+
+
+&#x20; *return (...);*
+
+*}*
+
+
+
+When Dashboard loads:
+
+Dashboard renders
+
+&#x20;     ↓
+
+useEffect()
+
+&#x20;     ↓
+
+fetch("/students")
+
+&#x20;     ↓
+
+FastAPI
+
+&#x20;     ↓
+
+students data
+
+&#x20;     ↓
+
+setStudents()
+
+&#x20;     ↓
+
+React re-renders
+
+&#x20;     ↓
+
+Display students
+
+
+
+This is exactly the kind of thing we'll eventually do with your FastAPI backend.
 
 
 

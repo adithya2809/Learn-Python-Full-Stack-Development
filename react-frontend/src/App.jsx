@@ -8,6 +8,11 @@ function App(){
     "password":""
   });
 
+  const [message,setMessage]=useState("");
+  const [error,setError]=useState("");
+  const [loading,setLoading]=useState(false);
+
+  
   function handleChange(event){
     const{name,value}=event.target;
 
@@ -19,6 +24,11 @@ function App(){
   }
   async function handleSubmit(event){
     event.preventDefault();
+
+    setMessage("");
+    setError("");
+    setLoading(true);
+    try{
     const response=await fetch("http://localhost:8000/auth/register",{
       method:"POST",
       headers:{
@@ -27,13 +37,24 @@ function App(){
       body:JSON.stringify(formData)
     }
     );
+  
 
     const data=await response.json();
-    console.log("Status:",response.status);
-    console.log("Response:",data);
+    if (response.ok){
+      setMessage("Registration Successful!");
+    }
+    else {
+      setError(data.detail)
+    }
   }
-
-  return(
+    catch (error){
+      setError("Unable to connect to the server");
+    }finally {
+      setLoading(false);
+    }
+  }
+  
+  return (
     <>
     <form onSubmit={handleSubmit}>
       <input type="text" name="username" value={formData.username} 
@@ -45,8 +66,10 @@ function App(){
       <input type="password" name="password" value={formData.password}
       onChange={handleChange} />
 
-      <button type="submit">Register</button>
+      <button type="submit" disabled={loading}>{loading?"Registering":"Register"}</button>
 
+      {message&&<p>{message}</p>}
+      {error&&<p>{error}</p>}
     </form>
 
     </>
