@@ -2,22 +2,46 @@ import {useState,useEffect} from "react";
 
 
 function App(){
-  const [message,setMessage]=useState("");
-  const [error,setError]=useState("");
-  const [loading,setLoading]=useState(false);
-  const[count,setCount]=useState(0);
-  const [students,setStudents]=useState([]);
+const [students, setStudents] = useState([]);
+const [StudentLoading, setStudentLoading] = useState(true);
+const [studentsError, setStudentsError] = useState("");
+
+const [formData, setFormData] = useState({
+  username: "",
+  email: "",
+  password: ""
+});
+
+const [message, setMessage] = useState("");
+const [registerError, setRegisterError] = useState("");
+const [registerLoading, setRegisterLoading] = useState(false);
+
+const [count, setCount] = useState(0);
 
   useEffect(()=>{ //NO dependacy
     async function getStudents(){
+      try{
       const response=await fetch("http://localhost:8000/students");
+
+      if(!response.ok){
+        throw new Error("Failed to fetch students");
+      }
       const data=await response.json();
+    
 
       setStudents(data);
 
     }
+    catch (error){
+      setStudentsError("Unable to load students")
+    }
+    finally{
+      setStudentLoading(false);
+    }
+  }
     getStudents();
-  },[]);
+},[]);
+
 
   useEffect(()=>{
     const timer=setInterval(() => {
@@ -26,12 +50,8 @@ function App(){
     return ()=> {
       clearInterval(timer);
     };
-  });
-  const [formData,setFormData]=useState({
-    "username":"",
-    "email":"",
-    "password":""
-  });
+  },[]);
+ 
 
   useEffect(()=> {
     console.log("Effect ran. Count:",count);
@@ -51,8 +71,8 @@ function App(){
     event.preventDefault();
 
     setMessage("");
-    setError("");
-    setLoading(true);
+    setRegisterError("");
+    setRegisterLoading(true);
     try{
     const response=await fetch("http://localhost:8000/auth/register",{
       method:"POST",
@@ -69,13 +89,13 @@ function App(){
       setMessage("Registration Successful!");
     }
     else {
-      setError(data.detail)
+      setRegisterError(data.detail)
     }
   }
     catch (error){
-      setError("Unable to connect to the server");
+      setRegisterError("Unable to connect to the server");
     }finally {
-      setLoading(false);
+      setRegisterLoading(false);
     }
   }
   return(
@@ -90,21 +110,31 @@ function App(){
       <input type="password" name="password" value={formData.password}
       onChange={handleChange} />
 
-      <button type="submit" disabled={loading}>{loading?"Registering":"Register"}</button>
+      <button type="submit" disabled={registerLoading}>{registerLoading?"Registering":"Register"}</button>
 
       {message&&<p>{message}</p>}
-      {error&&<p>{error}</p>}
+      {registerError&&<p>{registerError}</p>}
     </form>
-    <h1>Students</h1>
-    {students.map((student)=>(
-      <p key={student.id}>{student.name }</p>
-    ))}
+    
     <h1>{count}</h1>
     <button onClick={()=> setCount(count+1)}>
       Increase
     </button>
 
     <button onClick={()=> setCount(0)}>Reset</button>
+
+    <h1>Students</h1>
+    {StudentLoading && <p>Loading students...</p>}
+    {studentsError && <p>{studentsError}</p>}
+    {!StudentLoading &&
+  !studentsError &&
+  students.map((student) => (
+    <p key={student.id}>
+      {student.name}
+    </p>
+  ))}
+
+    
     </>
 
   );
