@@ -2,9 +2,13 @@ import {useState,useEffect} from "react";
 
 
 function App(){
-  
+  const [message,setMessage]=useState("");
+  const [error,setError]=useState("");
+  const [loading,setLoading]=useState(false);
+  const[count,setCount]=useState(0);
   const [students,setStudents]=useState([]);
-  useEffect(()=>{
+
+  useEffect(()=>{ //NO dependacy
     async function getStudents(){
       const response=await fetch("http://localhost:8000/students");
       const data=await response.json();
@@ -14,15 +18,24 @@ function App(){
     }
     getStudents();
   },[]);
+
+  useEffect(()=>{
+    const timer=setInterval(() => {
+      console.log("running")
+    }, 100);
+    return ()=> {
+      clearInterval(timer);
+    };
+  });
   const [formData,setFormData]=useState({
     "username":"",
     "email":"",
     "password":""
   });
 
-  const [message,setMessage]=useState("");
-  const [error,setError]=useState("");
-  const [loading,setLoading]=useState(false);
+  useEffect(()=> {
+    console.log("Effect ran. Count:",count);
+  },[count]);
 
   
   function handleChange(event){
@@ -84,8 +97,14 @@ function App(){
     </form>
     <h1>Students</h1>
     {students.map((student)=>(
-      <p key={student.id}>{student.name}</p>
+      <p key={student.id}>{student.name }</p>
     ))}
+    <h1>{count}</h1>
+    <button onClick={()=> setCount(count+1)}>
+      Increase
+    </button>
+
+    <button onClick={()=> setCount(0)}>Reset</button>
     </>
 
   );
