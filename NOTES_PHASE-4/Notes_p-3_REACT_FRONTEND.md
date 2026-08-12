@@ -1056,3 +1056,757 @@ Then:
 
 catch handles it.
 
+
+
+
+
+#### **Lesson 22 — useRef**
+
+
+
+So far you've learned an important behavior of useState:
+
+setState()
+
+&#x20;  ↓
+
+State changes
+
+&#x20;  ↓
+
+React re-renders
+
+&#x20;  ↓
+
+UI updates
+
+
+
+But sometimes we want to remember something without causing a re-render.
+
+That's where useRef() comes in.
+
+
+
+##### **1. Basic useRef**
+
+Import it:
+
+
+
+*import { useRef } from "react";*
+
+
+
+Then:
+
+*const countRef = useRef(0);*
+
+
+
+A ref looks like:
+
+countRef
+
+&#x20;  ↓
+
+{ current: 0 }
+
+
+
+The value is stored inside:
+
+*countRef.current*
+
+
+
+So:
+
+*console.log(countRef.current);*
+
+
+
+prints:
+
+0
+
+
+
+You can change it:
+
+*countRef.current = 10;*
+
+
+
+Now:
+
+*console.log(countRef.current);*
+
+
+
+prints:
+
+10
+
+
+
+##### **2. The Most Important Difference**
+
+Compare:
+
+*const \[count, setCount] = useState(0);*
+
+
+
+with:
+
+*const countRef = useRef(0);*
+
+
+
+**useState**
+
+*setCount(10);*
+
+
+
+causes:
+
+State changes
+
+&#x20;  ↓
+
+Re-render
+
+
+
+**useRef**
+
+*countRef.current = 10;*
+
+
+
+does not cause:
+
+❌ Re-render
+
+
+
+So:
+
+useState
+
+→ stores state + triggers re-render
+
+
+
+useRef
+
+→ stores a mutable value + does NOT trigger re-render
+
+This is the most important thing to understand about useRef.
+
+
+
+##### **3. Why Would We Want That?**
+
+One common use is accessing a DOM element directly.
+
+
+
+For example:
+
+<input />
+
+
+
+Suppose we want to automatically focus that input.
+
+
+
+We can create a ref:
+
+*const inputRef = useRef(null);*
+
+
+
+Then attach it:
+
+*<input ref={inputRef} />*
+
+
+
+Now React gives us access to the actual DOM element through:
+
+*inputRef.current*
+
+
+
+##### **4. Focusing an Input**
+
+Complete example:
+
+
+
+*import { useRef } from "react";*
+
+
+
+*function App() {*
+
+&#x20; *const inputRef = useRef(null);*
+
+
+
+&#x20; *function focusInput() {*
+
+&#x20;   *inputRef.current.focus();*
+
+&#x20; *}*
+
+
+
+&#x20; *return (*
+
+&#x20;   *<>*
+
+&#x20;     *<input ref={inputRef} />*
+
+
+
+&#x20;     *<button onClick={focusInput}>*
+
+&#x20;       *Focus Input*
+
+&#x20;     *</button>*
+
+&#x20;   *</>*
+
+&#x20; *);*
+
+*}*
+
+
+
+*export default App;*
+
+
+
+The flow is:
+
+<input>
+
+&#x20;  ↓
+
+ref={inputRef}
+
+&#x20;  ↓
+
+inputRef.current
+
+&#x20;  ↓
+
+actual DOM input
+
+
+
+When the button is clicked:
+
+*inputRef.current.focus();*
+
+
+
+React/JavaScript tells the actual input:
+
+Focus yourself.
+
+
+
+##### **5. Why Not Use useState?**
+
+
+
+You might ask:
+
+Why not store the input element in state?
+
+
+
+Because we don't need the UI to **re-render** when the reference changes.
+
+
+
+We're simply saying:
+
+"Remember this DOM element so I can access it later."
+
+
+
+That's exactly what refs are good for.
+
+
+
+##### **6. Another Important Use: Remembering Previous Values**
+
+Refs can also remember a value between renders.
+
+
+
+For example:
+
+*const previousCount = useRef(0);*
+
+
+
+Suppose:
+
+count = 5
+
+
+
+We can store something in:
+
+*previousCount.current*
+
+
+
+and it persists across renders.
+
+
+
+Unlike a normal variable:
+
+*let previousCount = 0;*
+
+
+
+which gets recreated every time the component function runs.
+
+
+
+##### **7. useRef vs Normal Variable**
+
+Imagine:
+
+*function App() {*
+
+&#x20; *let number = 0;*
+
+
+
+&#x20; *const numberRef = useRef(0);*
+
+
+
+&#x20; *...*
+
+*}*
+
+
+
+When React re-renders:
+
+Normal variable
+
+→ recreated
+
+
+
+**useRef**
+
+→ value persists
+
+
+
+So:
+
+let number = 0
+
+
+
+doesn't reliably preserve mutable data between renders.
+
+
+
+But:
+
+*const numberRef = useRef(0);*
+
+does.
+
+
+
+##### **8. Important Rule**
+
+Don't use a ref when the value needs to appear in the UI.
+
+
+
+For example, this is usually wrong:
+
+*const countRef = useRef(0);*
+
+*countRef.current++;*
+
+
+
+*return <h1>{countRef.current}</h1>;*
+
+
+
+**Changing:**
+
+*countRef.current++*
+
+
+
+doesn't trigger a re-render.
+
+
+
+So the UI won't automatically update.
+
+
+
+If the value should affect what the user sees:
+
+*const \[count, setCount] = useState(0);*
+
+is usually the correct choice.
+
+
+
+##### **9. Simple Mental Model**
+
+Think of them this way:
+
+
+
+**State**
+
+"React, this value affects my UI. Please re-render when it changes."
+
+*const \[count, setCount] = useState(0);*
+
+
+
+**Ref**
+
+"React, remember this value/element for me, but don't re-render just because it changed."
+
+*const countRef = useRef(0);*
+
+
+
+
+
+#### **Lesson 23 — useRef to Remember the Previous Value**
+
+Suppose:
+
+*const \[count, setCount] = useState(0);*
+
+
+
+and you want to know:
+
+Current count: 3
+
+Previous count: 2
+
+
+
+A normal variable won't reliably remember 2 between renders.
+
+A ref can.
+
+
+
+The Pattern
+
+
+
+We'll use:
+
+*const previousCount = useRef(null);*
+
+
+
+Then:
+
+*useEffect(() => {*
+
+&#x20; *previousCount.current = count;*
+
+*}, \[count]);*
+
+
+
+The idea is:
+
+Render with count = 0
+
+&#x20;       ↓
+
+previousCount = null
+
+&#x20;       ↓
+
+effect runs
+
+&#x20;       ↓
+
+previousCount = 0
+
+
+
+
+
+count changes to 1
+
+&#x20;       ↓
+
+render
+
+&#x20;       ↓
+
+previousCount still = 0
+
+&#x20;       ↓
+
+effect runs
+
+&#x20;       ↓
+
+previousCount = 1
+
+
+
+So during the render where count = 1:
+
+current count  = 1
+
+previous count = 0
+
+
+
+##### **Complete Example**
+
+*import { useEffect, useRef, useState } from "react";*
+
+
+
+*function App() {*
+
+&#x20; *const \[count, setCount] = useState(0);*
+
+&#x20; *const previousCount = useRef(null);*
+
+
+
+&#x20; *useEffect(() => {*
+
+&#x20;   *previousCount.current = count;*
+
+&#x20; *}, \[count]);*
+
+
+
+&#x20; *return (*
+
+&#x20;   *<>*
+
+&#x20;     *<h1>Current: {count}</h1>*
+
+
+
+&#x20;     *<h2>*
+
+&#x20;       *Previous: {previousCount.current}*
+
+&#x20;     *</h2>*
+
+
+
+&#x20;     *<button onClick={() => setCount(count + 1)}>*
+
+&#x20;       *Increase*
+
+&#x20;     *</button>*
+
+&#x20;   *</>*
+
+&#x20; *);*
+
+*}*
+
+
+
+*export default App;*
+
+
+
+But there's a subtle issue here.
+
+Because useEffect() runs after rendering, the displayed value may not behave exactly as you initially expect. This is actually a good opportunity to understand the timing of refs and effects.
+
+
+
+Let's trace it.
+
+
+
+**Initial render**
+
+count = 0
+
+*previousCount.current = null*
+
+
+
+UI renders:
+
+Current: 0
+
+Previous: null
+
+
+
+Then the effect runs:
+
+*previousCount.current = 0*
+
+
+
+**Click Increase**
+
+Now:
+
+count = 1
+
+*previousCount.current = 0*
+
+
+
+React renders:
+
+Current: 1
+
+Previous: 0
+
+
+
+Then the effect runs:
+
+*previousCount.current = 1*
+
+
+
+Next time you click:
+
+count = 2
+
+*previousCount.current = 1*
+
+
+
+So the UI shows:
+
+Current: 2
+
+Previous: 1
+
+
+
+That's the behavior we want.
+
+
+
+##### **Why Does This Work?**
+
+The important part is that changing:
+
+*previousCount.current = count;*
+
+
+
+does not cause another render.
+
+
+
+If it did, we'd get an endless cycle:
+
+render
+
+&#x20;↓
+
+effect
+
+&#x20;↓
+
+ref changes
+
+&#x20;↓
+
+render
+
+&#x20;↓
+
+effect
+
+&#x20;↓
+
+...
+
+
+
+But refs don't trigger renders.
+
+So the ref quietly remembers the value for the next render.
+
+
+
+One More Important Use of useRef
+
+
+
+Refs are not just for DOM elements.
+
+
+
+There are two major categories you'll commonly see:
+
+##### **1. DOM reference**
+
+*const inputRef = useRef(null);*
+
+*<input ref={inputRef} />*
+
+
+
+Used for:
+
+*inputRef.current.focus();*
+
+
+
+##### **2. Persistent mutable value**
+
+*const previousCount = useRef(null);*
+
+
+
+Used for:
+
+*previousCount.current*
+
+
+
+without causing a render.
+
+
+
+
+
+#### 
+

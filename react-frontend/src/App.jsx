@@ -1,4 +1,4 @@
-import {useState,useEffect} from "react";
+import {useState,useEffect,useRef} from "react";
 
 
 function App(){
@@ -18,6 +18,8 @@ const [registerLoading, setRegisterLoading] = useState(false);
 
 const [count, setCount] = useState(0);
 
+const inputRef=useRef(null);
+const previousCount=useRef(null);
   useEffect(()=>{ //NO dependacy
     async function getStudents(){
       try{
@@ -55,6 +57,10 @@ const [count, setCount] = useState(0);
 
   useEffect(()=> {
     console.log("Effect ran. Count:",count);
+  },[count]);
+
+  useEffect(()=>{
+    previousCount.current=count;
   },[count]);
 
   
@@ -98,6 +104,10 @@ const [count, setCount] = useState(0);
       setRegisterLoading(false);
     }
   }
+
+  function focusInput(){
+    inputRef.current.focus();
+  }
   return(
     <>
      <form onSubmit={handleSubmit}>
@@ -133,8 +143,12 @@ const [count, setCount] = useState(0);
       {student.name}
     </p>
   ))}
+  <input ref={inputRef} />
+  <button onClick={focusInput}>Focus Input</button>
 
-    
+  <h1>Current:{count}</h1>
+  <h2>Previous:{previousCount.current}</h2>
+  
     </>
 
   );
