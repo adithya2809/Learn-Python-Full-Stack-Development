@@ -1,4 +1,4 @@
-import {useState,useEffect,useRef} from "react";
+import {useState,useEffect,useRef, useMemo} from "react";
 
 
 function App(){
@@ -20,6 +20,13 @@ const [count, setCount] = useState(0);
 
 const inputRef=useRef(null);
 const previousCount=useRef(null);
+const [search,setSearch]=useState("")
+const dragons=[
+  {id:1,name:"Adhi"},
+  {id:2,name:"caraxes"},
+  {id:3,name:"sunfyre"}
+  
+];
   useEffect(()=>{ //NO dependacy
     async function getStudents(){
       try{
@@ -108,6 +115,16 @@ const previousCount=useRef(null);
   function focusInput(){
     inputRef.current.focus();
   }
+
+  const filteredDragons=useMemo(()=>{
+    console.log("filtering dragons...");
+    return dragons.filter((dragons)=>
+    dragons.name
+          .toLowerCase()
+          .includes(search.toLowerCase())
+        );
+      
+  },[search])
   return(
     <>
      <form onSubmit={handleSubmit}>
@@ -149,10 +166,14 @@ const previousCount=useRef(null);
   <h1>Current:{count}</h1>
   <h2>Previous:{previousCount.current}</h2>
   
+  <input value={search} 
+  onChange={(event)=> setSearch(event.target.value)} 
+  placeholder="Search dragons"/>
+
+  {filteredDragons.map((dragons)=>(
+    <p key={dragons.id}>{dragons.name}</p>
+  ))}
     </>
-
   );
-  
-
 }
 export default App;

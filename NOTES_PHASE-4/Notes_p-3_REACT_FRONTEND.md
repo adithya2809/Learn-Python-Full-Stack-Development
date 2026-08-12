@@ -1808,5 +1808,573 @@ without causing a render.
 
 
 
-#### 
+#### **Lesson 24 — useMemo**
+
+Now we move to:
+
+How can we avoid doing an expensive calculation again when it doesn't need to be recalculated?
+
+That's useMemo().
+
+
+
+##### **1. The Problem**
+
+Imagine we have:
+
+*function calculateSomething() {*
+
+&#x20; *console.log("Calculating...");*
+
+&#x20; *return 100 \* 100;*
+
+*}*
+
+
+
+*and inside our component:*
+
+*function App() {*
+
+&#x20; *const \[count, setCount] = useState(0);*
+
+
+
+&#x20; *const result = calculateSomething();*
+
+
+
+&#x20; *return (*
+
+&#x20;   *<>*
+
+&#x20;     *<h1>{result}</h1>*
+
+
+
+&#x20;     *<button onClick={() => setCount(count + 1)}>*
+
+&#x20;       *Count: {count}*
+
+&#x20;     *</button>*
+
+&#x20;   *</>*
+
+&#x20; *);*
+
+*}*
+
+
+
+Every time count changes:
+
+setCount()
+
+&#x20;↓
+
+React re-renders App
+
+&#x20;↓
+
+calculateSomething()
+
+&#x20;↓
+
+"Calculating..."
+
+
+
+Even though calculateSomething() doesn't depend on count.
+
+
+
+That's unnecessary work.
+
+
+
+##### **2. useMemo**
+
+We can write:
+
+
+
+*const result = useMemo(() => {*
+
+&#x20; *return calculateSomething();*
+
+*}, \[]);*
+
+
+
+Now React remembers the calculated result.
+
+Initial render
+
+&#x20;↓
+
+calculateSomething()
+
+&#x20;↓
+
+result stored
+
+
+
+count changes
+
+&#x20;↓
+
+re-render
+
+&#x20;↓
+
+useMemo returns stored result
+
+&#x20;↓
+
+calculateSomething() NOT called
+
+
+
+So the basic idea is:
+
+useMemo memoizes a calculated value.
+
+
+
+"Memoize" basically means:
+
+Remember the result so we don't have to calculate it again unnecessarily.
+
+
+
+##### **3. Dependency Array**
+
+Just like useEffect, useMemo has dependencies:
+
+
+
+*useMemo(() => {*
+
+&#x20; *return calculateSomething();*
+
+*}, \[count]);*
+
+
+
+This means:
+
+Recalculate when count changes.
+
+
+
+Compare:
+
+*useMemo(() => {*
+
+&#x20; *return calculateSomething();*
+
+*}, \[]);*
+
+
+
+means:
+
+Calculate initially
+
+↓
+
+Reuse result
+
+↓
+
+Reuse result
+
+↓
+
+Reuse result
+
+
+
+Whereas:
+
+*useMemo(() => {*
+
+&#x20; *return calculateSomething();*
+
+*}, \[count]);*
+
+
+
+means:
+
+Calculate
+
+&#x20;↓
+
+count changes
+
+&#x20;↓
+
+Calculate again
+
+&#x20;↓
+
+count changes
+
+&#x20;↓
+
+Calculate again
+
+
+
+##### **4. useMemo vs useRef**
+
+This is important because you just learned useRef.
+
+
+
+**useRef**
+
+*const valueRef = useRef(10);*
+
+
+
+Stores:
+
+{ current: 10 }
+
+
+
+You access:
+
+valueRef.current
+
+
+
+Its purpose is to **maintain a mutable value** across renders without causing a render when changed.
+
+
+
+**useMemo**
+
+*const value = useMemo(() => expensiveCalculation(), \[]);*
+
+
+
+Its purpose is to cache a calculated result.
+
+
+
+So:
+
+useRef
+
+→ "Remember this value."
+
+
+
+useMemo
+
+→ "Remember the result of this calculation."
+
+
+
+##### **5. Practical Example**
+
+Let's create a search/filter example.
+
+
+
+Suppose:
+
+*const students = \[*
+
+&#x20; *{ id: 1, name: "Adithya" },*
+
+&#x20; *{ id: 2, name: "Agney" },*
+
+&#x20; *{ id: 3, name: "Rahul" }*
+
+*];*
+
+
+
+We want to filter students based on a search term:
+
+*const filteredStudents = students.filter(*
+
+&#x20; *student => student.name.includes(search)*
+
+*);*
+
+
+
+We could write:
+
+*const filteredStudents = students.filter(...);*
+
+
+
+But the filtering calculation runs every time the component renders.
+
+
+
+Instead:
+
+*const filteredStudents = useMemo(() => {*
+
+&#x20; *return students.filter(*
+
+&#x20;   *student => student.name.includes(search)*
+
+&#x20; *);*
+
+*}, \[search]);*
+
+
+
+Now the filtering is recalculated when:
+
+search changes
+
+
+
+but not merely because some unrelated state changed.
+
+
+
+##### **6. Complete Example**
+
+*import { useMemo, useState } from "react";*
+
+
+
+*function App() {*
+
+&#x20; *const \[search, setSearch] = useState("");*
+
+&#x20; *const \[count, setCount] = useState(0);*
+
+
+
+&#x20; *const students = \[*
+
+&#x20;   *{ id: 1, name: "Adithya" },*
+
+&#x20;   *{ id: 2, name: "Agney" },*
+
+&#x20;   *{ id: 3, name: "Rahul" }*
+
+&#x20; *];*
+
+
+
+&#x20; *const filteredStudents = useMemo(() => {*
+
+&#x20;   *console.log("Filtering students...");*
+
+
+
+&#x20;   *return students.filter((student) =>*
+
+&#x20;     *student.name*
+
+&#x20;       *.toLowerCase()*
+
+&#x20;       *.includes(search.toLowerCase())*
+
+&#x20;   *);*
+
+&#x20; *}, \[search]);*
+
+
+
+&#x20; *return (*
+
+&#x20;   *<>*
+
+&#x20;     *<input*
+
+&#x20;       *value={search}*
+
+&#x20;       *onChange={(event) => setSearch(event.target.value)}*
+
+&#x20;       *placeholder="Search students"*
+
+&#x20;     */>*
+
+
+
+&#x20;     *<button onClick={() => setCount(count + 1)}>*
+
+&#x20;       *Count: {count}*
+
+&#x20;     *</button>*
+
+
+
+&#x20;     *{filteredStudents.map((student) => (*
+
+&#x20;       *<p key={student.id}>*
+
+&#x20;         *{student.name}*
+
+&#x20;       *</p>*
+
+&#x20;     *))}*
+
+&#x20;   *</>*
+
+&#x20; *);*
+
+*}*
+
+
+
+*export default App;*
+
+
+
+Now:
+
+Type "ag"
+
+&#x20;↓
+
+search changes
+
+&#x20;↓
+
+useMemo recalculates
+
+&#x20;↓
+
+Agney
+
+
+
+But:
+
+
+
+Click Count
+
+&#x20;↓
+
+count changes
+
+&#x20;↓
+
+component re-renders
+
+&#x20;↓
+
+search didn't change
+
+&#x20;↓
+
+useMemo uses cached result
+
+
+
+So you shouldn't see:
+
+
+
+Filtering students...
+
+
+
+again just because count changed.
+
+
+
+##### **7. Important: useMemo Is NOT Mainly About Preventing Rendering**
+
+This is a common misconception.
+
+
+
+useMemo does not prevent the component from rendering.
+
+
+
+The component still re-renders:
+
+count changes
+
+&#x20;↓
+
+App re-renders
+
+
+
+What useMemo prevents is the unnecessary recalculation:
+
+App re-renders
+
+&#x20;↓
+
+useMemo
+
+&#x20;↓
+
+cached result
+
+
+
+So:
+
+❌ useMemo → prevents re-render
+
+
+
+✅ useMemo → avoids unnecessary recalculation
+
+
+
+##### **8. Don't Use useMemo Everywhere**
+
+This is important.
+
+
+
+You don't need:
+
+*const result = useMemo(() => 2 + 2, \[]);*
+
+
+
+That's pointless.
+
+The calculation is already extremely cheap.
+
+
+
+useMemo is useful when:
+
+A calculation is expensive
+
+A large array is being filtered/sorted
+
+A complex transformation is performed
+
+You have a performance problem that memoization actually helps
+
+
+
+For ordinary calculations:
+
+*const total = price \* quantity;*
+
+
+
+just write:
+
+*const total = price \* quantity;*
+
+
+
+Don't automatically wrap everything in useMemo.
 
