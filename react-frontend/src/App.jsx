@@ -1,4 +1,4 @@
-import {useState,useEffect,useRef, useMemo} from "react";
+import {useState,useEffect,useRef, useMemo,useCallback} from "react";
 
 
 function App(){
@@ -36,7 +36,6 @@ const dragons=[
         throw new Error("Failed to fetch students");
       }
       const data=await response.json();
-    
 
       setStudents(data);
 
@@ -55,7 +54,7 @@ const dragons=[
   useEffect(()=>{
     const timer=setInterval(() => {
       console.log("running")
-    }, 100);
+    }, 1000);
     return ()=> {
       clearInterval(timer);
     };
@@ -125,6 +124,13 @@ const dragons=[
         );
       
   },[search])
+
+  //just a demo of useCallback(), no use case yet
+ const handleClick=useCallback(()=>{
+  console.log("Child Clicked");
+ },[]);
+
+  
   return(
     <>
      <form onSubmit={handleSubmit}>
@@ -173,6 +179,9 @@ const dragons=[
   {filteredDragons.map((dragons)=>(
     <p key={dragons.id}>{dragons.name}</p>
   ))}
+
+  
+  
     </>
   );
 }

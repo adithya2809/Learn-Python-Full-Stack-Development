@@ -2378,3 +2378,553 @@ just write:
 
 Don't automatically wrap everything in useMemo.
 
+
+
+
+
+#### **Lesson 25 — useCallback**
+
+useCallback remembers a function between renders.
+
+
+
+1\. Why would we need that?
+
+
+
+Remember: whenever a component re-renders, the **component function runs again.**
+
+
+
+Consider:
+
+
+
+*function App() {*
+
+&#x20; *const \[count, setCount] = useState(0);*
+
+
+
+&#x20; *function handleClick() {*
+
+&#x20;   *console.log("Clicked");*
+
+&#x20; *}*
+
+
+
+&#x20; *return (*
+
+&#x20;   *<>*
+
+&#x20;     *<h1>{count}</h1>*
+
+
+
+&#x20;     *<button onClick={() => setCount(count + 1)}>*
+
+&#x20;       *Increase*
+
+&#x20;     *</button>*
+
+
+
+&#x20;     *<Child onClick={handleClick} />*
+
+&#x20;   *</>*
+
+&#x20; *);*
+
+*}*
+
+
+
+Every time count changes:
+
+
+
+count changes
+
+&#x20;   ↓
+
+App re-renders
+
+&#x20;   ↓
+
+handleClick is created again
+
+&#x20;   ↓
+
+Child receives a new function reference
+
+
+
+Even though the actual function logic hasn't changed.
+
+
+
+##### **2. Why Does That Matter?**
+
+Normally, creating a function again isn't a problem.
+
+
+
+But imagine Child is an expensive component that we don't want to re-render unnecessarily.
+
+
+
+We can use:
+
+*const handleClick = useCallback(() => {*
+
+&#x20; *console.log("Clicked");*
+
+*}, \[]);*
+
+
+
+Now React remembers the function reference.
+
+
+
+Conceptually:
+
+First render
+
+&#x20;   ↓
+
+create handleClick
+
+&#x20;   ↓
+
+remember it
+
+
+
+App re-renders
+
+&#x20;   ↓
+
+useCallback
+
+&#x20;   ↓
+
+dependencies unchanged
+
+&#x20;   ↓
+
+reuse same function
+
+
+
+##### **3. useCallback Syntax**
+
+*const functionName = useCallback(() => {*
+
+&#x20; *// function code*
+
+*}, \[dependencies]);*
+
+
+
+*For example:*
+
+
+
+*const handleClick = useCallback(() => {*
+
+&#x20; *console.log("Clicked");*
+
+*}, \[]);*
+
+
+
+The empty dependency array means:
+
+Keep the **same function reference** across renders because this function **doesn't depend on changing values.**
+
+
+
+
+
+##### **4. useCallback vs useMemo**
+
+This is very important.
+
+
+
+**useMemo**
+
+Remembers a value:
+
+*const result = useMemo(() => {*
+
+&#x20; *return expensiveCalculation();*
+
+*}, \[]);*
+
+
+
+Think:
+
+calculation
+
+&#x20;   ↓
+
+VALUE
+
+&#x20;   ↓
+
+remember it
+
+
+
+**useCallback**
+
+Remembers a function:
+
+*const handleClick = useCallback(() => {*
+
+&#x20; *console.log("Clicked");*
+
+*}, \[]);*
+
+
+
+Think:
+
+FUNCTION
+
+&#x20;   ↓
+
+remember it
+
+
+
+In fact, conceptually:
+
+*useCallback(fn, dependencies)*
+
+
+
+is similar to:
+
+*useMemo(() => fn, dependencies)*
+
+
+
+But useCallback communicates much more clearly:
+
+"I want to memoize this function."
+
+
+
+##### **5. A Practical Parent → Child Example**
+
+Let's create a child component:
+
+
+
+*function Child({ onClick }) {*
+
+&#x20; *console.log("Child rendered");*
+
+
+
+&#x20; *return (*
+
+&#x20;   *<button onClick={onClick}>*
+
+&#x20;     *Child Button*
+
+&#x20;   *</button>*
+
+&#x20; *);*
+
+*}*
+
+
+
+**Parent:**
+
+*function App() {*
+
+&#x20; *const \[count, setCount] = useState(0);*
+
+
+
+&#x20; *function handleClick() {*
+
+&#x20;   *console.log("Child clicked");*
+
+&#x20; *}*
+
+
+
+&#x20; *return (*
+
+&#x20;   *<>*
+
+&#x20;     *<h1>{count}</h1>*
+
+
+
+&#x20;     *<button onClick={() => setCount(count + 1)}>*
+
+&#x20;       *Increase*
+
+&#x20;     *</button>*
+
+
+
+&#x20;     *<Child onClick={handleClick} />*
+
+&#x20;   *</>*
+
+&#x20; *);*
+
+*}*
+
+
+
+When count changes:
+
+App re-renders
+
+&#x20;     ↓
+
+handleClick is recreated
+
+&#x20;     ↓
+
+Child receives a new function
+
+&#x20;     ↓
+
+Child may re-render
+
+
+
+##### **6. With useCallback**
+
+We can write:
+
+
+
+*const handleClick = useCallback(() => {*
+
+&#x20; *console.log("Child clicked");*
+
+*}, \[]);*
+
+
+
+Now:
+
+App re-renders
+
+&#x20;     ↓
+
+useCallback checks \[]
+
+&#x20;     ↓
+
+dependencies haven't changed
+
+&#x20;     ↓
+
+same function reference
+
+
+
+This becomes particularly useful when combined with React.memo().
+
+
+
+##### **7. React.memo**
+
+You don't need to master this yet, but you need to understand why useCallback exists.
+
+
+
+We can wrap the child:
+
+*const Child = React.memo(function Child({ onClick }) {*
+
+&#x20; *console.log("Child rendered");*
+
+
+
+&#x20; *return (*
+
+&#x20;   *<button onClick={onClick}>*
+
+&#x20;     *Child Button*
+
+&#x20;   *</button>*
+
+&#x20; *);*
+
+*});*
+
+
+
+Now React can skip rendering Child if its props haven't changed.
+
+Without useCallback:
+
+
+
+But there's a subtle problem.
+
+*function handleClick() {*
+
+&#x20; *console.log("Child clicked");*
+
+*}*
+
+
+
+Every parent render creates a new function.
+
+
+
+So React sees:
+
+Old onClick ≠ New onClick
+
+
+
+and thinks:
+
+"The prop changed."
+
+
+
+Therefore the child can re-render.
+
+
+
+**With:**
+
+*const handleClick = useCallback(() => {*
+
+&#x20; *console.log("Child clicked");*
+
+*}, \[]);*
+
+
+
+the function reference remains the same.
+
+
+
+So:
+
+Parent re-renders
+
+&#x20;      ↓
+
+same handleClick reference
+
+&#x20;      ↓
+
+Child props haven't changed
+
+&#x20;      ↓
+
+React.memo can skip Child render
+
+
+
+##### **8. Don't Use useCallback Everywhere**
+
+Just like useMemo, don't blindly wrap every function:
+
+*const add = useCallback(() => {*
+
+&#x20; *return 2 + 2;*
+
+*}, \[]);*
+
+
+
+There's no meaningful benefit here.
+
+Creating a simple function is cheap.
+
+
+
+useCallback is mainly useful when:
+
+passing functions to memoized child components
+
+function identity matters
+
+preventing unnecessary child renders
+
+working with dependencies in effects or other hooks where stable function references matter
+
+
+
+##### **9. Important Dependency Rule**
+
+Suppose:
+
+
+
+*const \[count, setCount] = useState(0);*
+
+
+
+*const handleClick = useCallback(() => {*
+
+&#x20; *console.log(count);*
+
+*}, \[count]);*
+
+
+
+Why \[count]?
+
+Because the function uses count.
+
+
+
+When count changes, we need a new function that sees the new value.
+
+
+
+count = 0
+
+&#x20;  ↓
+
+handleClick remembers count = 0
+
+
+
+count = 1
+
+&#x20;  ↓
+
+dependency changed
+
+&#x20;  ↓
+
+new handleClick
+
+&#x20;  ↓
+
+now sees count = 1
+
+
+
+So don't automatically use \[].
+
+The dependency array should represent values from the component that the callback depends on.
+
+
+
+
+
